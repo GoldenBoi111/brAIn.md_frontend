@@ -158,6 +158,7 @@ export function DashboardHub() {
   const sidebarLinks = useMemo(
     () => [
       { href: "/dashboard", label: "Dashboard", description: "Overview and recent memories." },
+      { href: "/backend", label: "Backend bridge", description: "Visual API surface and future connector." },
       brainVault ? { href: `/vault/${brainVault.id}`, label: "Vault", description: "Open the Brain Vault." } : null,
       { href: "/mind", label: "Mind map", description: "Explore the brain graph." },
     ].filter(Boolean) as Array<{ href: string; label: string; description: string }>,
