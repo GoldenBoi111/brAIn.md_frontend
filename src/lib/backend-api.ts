@@ -1,4 +1,6 @@
-export const API_BASE_PATH = "/api/bridge";
+export const API_BASE_URL =
+  process.env.NEXT_PUBLIC_BACKEND_API_BASE_URL?.trim() ??
+  "https://mcp.brain-dev.dev";
 
 export const FILLER_FILE_ID = "file-example-id";
 export const FILLER_TOKEN_ID = "token-example-id";
@@ -50,12 +52,15 @@ async function request<T>(
   }
 
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  const url = `${API_BASE_PATH}${normalizedPath}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
+  const url = new URL(normalizedPath, API_BASE_URL);
+  if (searchParams.toString()) {
+    url.search = searchParams.toString();
+  }
 
   let response: Response;
 
   try {
-    response = await fetch(url, {
+    response = await fetch(url.toString(), {
       method,
       credentials: "include",
       headers: options.body ? { "Content-Type": "application/json" } : undefined,

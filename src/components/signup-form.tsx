@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Brain, Loader2, Lock, Sparkles } from "lucide-react";
 
-import { setAuthenticated } from "@/lib/auth";
+import { backendApi } from "@/lib/backend-api";
 
 export function SignupForm() {
   const [email, setEmail] = useState("");
@@ -33,11 +33,14 @@ export function SignupForm() {
     setIsLoading(true);
 
     try {
-      setAuthenticated(email.trim());
+      await backendApi.register({
+        email: email.trim(),
+        password,
+      });
       window.location.assign("/dashboard");
-    } catch {
+    } catch (error) {
       setIsLoading(false);
-      setError("Something went wrong. Please try again.");
+      setError(error instanceof Error ? error.message : "Something went wrong. Please try again.");
     }
   };
 
@@ -140,7 +143,7 @@ export function SignupForm() {
           </div>
           <div className="login-card__hint">
             <Lock className="size-4" />
-            <span>Your account stays local for this prototype, then opens the graph right away.</span>
+            <span>Your account is created through the secure website API, then opens the graph right away.</span>
           </div>
         </div>
       </section>

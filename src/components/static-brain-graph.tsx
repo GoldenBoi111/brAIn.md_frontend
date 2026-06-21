@@ -14,6 +14,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { backendApi } from "@/lib/backend-api";
 import { clearAuthenticatedSession } from "@/lib/auth";
 import {
   buildFileTreeGraph,
@@ -220,9 +221,13 @@ export function StaticBrainGraph({ fileTree: fileTreeProp }: StaticBrainGraphPro
           <button
             type="button"
             className="memory-app__icon-button"
-            onClick={() => {
-              clearAuthenticatedSession();
-              window.location.assign("/login");
+            onClick={async () => {
+              try {
+                await backendApi.logout();
+              } finally {
+                clearAuthenticatedSession();
+                window.location.assign("/login");
+              }
             }}
             aria-label="Sign out"
           >

@@ -6,16 +6,17 @@ import { ArrowLeft, ArrowUpRight, Brain, PlugZap, Shield, X } from "lucide-react
 import { BackendTokenAdmin } from "@/components/backend-token-admin";
 import { ThemeToggleButton } from "@/components/theme-toggle-button";
 import { clearAuthenticatedSession } from "@/lib/auth";
+import { backendApi } from "@/lib/backend-api";
 import { BACKEND_NOTES, BACKEND_SECTIONS } from "@/lib/backend-spec";
 
 export function BackendBridge() {
   return (
     <main className="backend-page">
       <header className="backend-page__topbar">
-        <div className="backend-page__brand">
+          <div className="backend-page__brand">
           <Brain className="size-4" />
           <div>
-            <p className="backend-page__eyebrow">Website API bridge</p>
+            <p className="backend-page__eyebrow">Website API</p>
             <h1 className="backend-page__title">Live backend surfaces</h1>
           </div>
         </div>
@@ -29,9 +30,13 @@ export function BackendBridge() {
           <button
             type="button"
             className="memory-app__icon-button"
-            onClick={() => {
-              clearAuthenticatedSession();
-              window.location.assign("/login");
+            onClick={async () => {
+              try {
+                await backendApi.logout();
+              } finally {
+                clearAuthenticatedSession();
+                window.location.assign("/login");
+              }
             }}
             aria-label="Sign out"
           >
@@ -42,18 +47,18 @@ export function BackendBridge() {
 
       <section className="backend-page__hero">
         <div className="backend-page__hero-copy">
-          <p className="backend-page__eyebrow">Production bridge</p>
-          <h2 className="backend-page__hero-title">The UI talks to the website API through secure same-origin routes.</h2>
+          <p className="backend-page__eyebrow">Direct connection</p>
+          <h2 className="backend-page__hero-title">The UI talks to the website API directly.</h2>
           <p className="backend-page__hero-lede">
-            In production the bridge proxies to the live backend at mcp.brain-dev.dev without changing
-            the UI paths.
+            The app points at the live backend API and keeps the same request shapes across auth,
+            files, tokens, and search.
           </p>
         </div>
 
         <div className="backend-page__hero-panel">
           <div className="backend-page__hero-stat">
-            <span>Bridge mode</span>
-            <strong>Live first</strong>
+            <span>Connection</span>
+            <strong>Direct</strong>
           </div>
           <div className="backend-page__hero-stat">
             <span>Backend URL</span>
@@ -61,7 +66,7 @@ export function BackendBridge() {
           </div>
           <div className="backend-page__hero-stat">
             <span>Transport</span>
-            <strong>Proxy route</strong>
+            <strong>Fetch</strong>
           </div>
         </div>
       </section>
@@ -129,8 +134,7 @@ export function BackendBridge() {
       <footer className="backend-page__footer">
         <PlugZap className="size-4" />
         <span>
-          Keep the route names stable. The bridge now points at the live website API in production
-          through a secure same-origin route.
+          Keep the request shapes stable. The frontend now talks directly to the live website API.
         </span>
         <ArrowUpRight className="size-4" />
       </footer>
