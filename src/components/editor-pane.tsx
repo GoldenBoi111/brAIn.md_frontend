@@ -1,0 +1,43 @@
+"use client";
+
+interface EditorPaneProps {
+  fileName: string | null;
+  value: string;
+  readOnly?: boolean;
+  onChange: (value: string) => void;
+}
+
+export function EditorPane({
+  fileName,
+  value,
+  readOnly = false,
+  onChange,
+}: EditorPaneProps) {
+  return (
+    <div className="flex h-full flex-col">
+      <header className="flex h-9 shrink-0 items-center gap-2 border-b border-border/60 px-3">
+        <span className="text-xs font-medium text-muted-foreground">Editor</span>
+        {fileName && (
+          <>
+            <span className="text-muted-foreground/40">·</span>
+            <span className="truncate text-xs text-foreground">{fileName}</span>
+          </>
+        )}
+        {readOnly && (
+          <span className="ml-auto text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+            Read only
+          </span>
+        )}
+      </header>
+      <textarea
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        readOnly={readOnly}
+        spellCheck={false}
+        className="scrollbar-thin flex-1 resize-none bg-transparent p-4 font-mono text-[13px] leading-relaxed text-foreground outline-none placeholder:text-muted-foreground disabled:cursor-default disabled:opacity-80"
+        style={{ fontFamily: "var(--font-mono)" }}
+        placeholder="Select a file from the explorer..."
+      />
+    </div>
+  );
+}
