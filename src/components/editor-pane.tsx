@@ -3,14 +3,14 @@
 interface EditorPaneProps {
   fileName: string | null;
   value: string;
-  readOnly?: boolean;
+  llmAccessLabel?: string | null;
   onChange: (value: string) => void;
 }
 
 export function EditorPane({
   fileName,
   value,
-  readOnly = false,
+  llmAccessLabel,
   onChange,
 }: EditorPaneProps) {
   return (
@@ -23,18 +23,17 @@ export function EditorPane({
             <span className="truncate text-xs text-foreground">{fileName}</span>
           </>
         )}
-        {readOnly && (
+        {llmAccessLabel && (
           <span className="ml-auto text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-            Read only
+            {llmAccessLabel}
           </span>
         )}
       </header>
       <textarea
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        readOnly={readOnly}
         spellCheck={false}
-        className="scrollbar-thin flex-1 resize-none bg-transparent p-4 font-mono text-[13px] leading-relaxed text-foreground outline-none placeholder:text-muted-foreground disabled:cursor-default disabled:opacity-80"
+        className="scrollbar-thin flex-1 resize-none bg-transparent p-4 font-mono text-[13px] leading-relaxed text-foreground outline-none placeholder:text-muted-foreground"
         style={{ fontFamily: "var(--font-mono)" }}
         placeholder="Select a file from the explorer..."
       />

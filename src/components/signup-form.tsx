@@ -6,9 +6,10 @@ import { Brain, Loader2, Lock, Sparkles } from "lucide-react";
 
 import { setAuthenticated } from "@/lib/auth";
 
-export function LoginForm() {
+export function SignupForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -21,6 +22,11 @@ export function LoginForm() {
 
     if (!email.trim() || !password.trim()) {
       setError("Email and password are required.");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
       return;
     }
 
@@ -40,18 +46,18 @@ export function LoginForm() {
         </div>
         <h1 className="login-page__title">brAIn.md</h1>
         <p className="login-page__subtitle">
-          Sign in to open your local markdown vault
+          Create an account to start your local vault
         </p>
       </div>
 
       <div className="login-card">
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="login-card__field">
-            <label htmlFor="email" className="login-card__label">
+            <label htmlFor="signup-email" className="login-card__label">
               Email
             </label>
             <input
-              id="email"
+              id="signup-email"
               type="email"
               autoComplete="email"
               placeholder="you@example.com"
@@ -63,22 +69,14 @@ export function LoginForm() {
           </div>
 
           <div className="login-card__field">
-            <div className="flex items-center justify-between gap-3">
-              <label htmlFor="password" className="login-card__label">
-                Password
-              </label>
-              <button
-                type="button"
-                className="text-xs text-muted-foreground transition-colors hover:text-foreground"
-              >
-                Forgot password?
-              </button>
-            </div>
+            <label htmlFor="signup-password" className="login-card__label">
+              Password
+            </label>
             <input
-              id="password"
+              id="signup-password"
               type="password"
-              autoComplete="current-password"
-              placeholder="Enter your password"
+              autoComplete="new-password"
+              placeholder="Create a password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               disabled={isLoading}
@@ -86,14 +84,21 @@ export function LoginForm() {
             />
           </div>
 
-          <label className="flex cursor-pointer items-center gap-2.5 text-sm text-muted-foreground">
+          <div className="login-card__field">
+            <label htmlFor="signup-confirm" className="login-card__label">
+              Confirm password
+            </label>
             <input
-              type="checkbox"
-              defaultChecked
-              className="size-4 rounded border border-input accent-primary"
+              id="signup-confirm"
+              type="password"
+              autoComplete="new-password"
+              placeholder="Repeat your password"
+              value={confirmPassword}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+              disabled={isLoading}
+              className="login-card__input"
             />
-            Remember this device
-          </label>
+          </div>
 
           {error && (
             <div className="login-card__error" role="alert">
@@ -109,10 +114,10 @@ export function LoginForm() {
             {isLoading ? (
               <>
                 <Loader2 className="size-4 animate-spin" />
-                Opening your vault...
+                Creating account...
               </>
             ) : (
-              "Sign in to vault"
+              "Create account"
             )}
           </button>
         </form>
@@ -124,14 +129,14 @@ export function LoginForm() {
           </div>
           <div className="login-card__hint">
             <Sparkles className="size-4" />
-            <span>Jump straight into your files, folders, and notes after sign-in.</span>
+            <span>After sign-up you&apos;ll land on your vault hub.</span>
           </div>
         </div>
       </div>
 
       <p className="login-page__footer">
-        Don&apos;t have an account?{" "}
-        <Link href="/signup">Create one</Link>
+        Already have an account?{" "}
+        <Link href="/login">Sign in</Link>
       </p>
     </>
   );

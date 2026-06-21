@@ -12,7 +12,7 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { cn } from "@/lib/utils";
-import type { FileNode } from "@/types/file-tree";
+import type { FileNode, LlmAccess } from "@/types/file-tree";
 
 const SIDEBAR_DEFAULT_SIZE = 18;
 const SIDEBAR_MIN_SIZE = 10;
@@ -25,7 +25,7 @@ interface ResizableWorkspaceProps {
   fileTree: FileNode[];
   fileName: string | null;
   markdown: string;
-  readOnly?: boolean;
+  llmAccessLabel?: string | null;
   onMarkdownChange: (value: string) => void;
   selectedFileId: string | null;
   onSelectFile: (id: string) => void;
@@ -36,7 +36,9 @@ interface ResizableWorkspaceProps {
   onDeleteFile: (fileId: string) => void;
   onRenameFolder: (folderId: string) => void;
   onDeleteFolder: (folderId: string) => void;
+  onSetLlmAccess: (fileId: string, access: LlmAccess) => void;
   expandFolderId: string | null;
+  defaultExpandedIds?: string[];
   sidebarCollapsed: boolean;
   onSidebarCollapsedChange: (collapsed: boolean) => void;
   sidebarRef: React.RefObject<ImperativePanelHandle | null>;
@@ -49,7 +51,7 @@ export function ResizableWorkspace({
   fileTree,
   fileName,
   markdown,
-  readOnly = false,
+  llmAccessLabel,
   onMarkdownChange,
   selectedFileId,
   onSelectFile,
@@ -60,7 +62,9 @@ export function ResizableWorkspace({
   onDeleteFile,
   onRenameFolder,
   onDeleteFolder,
+  onSetLlmAccess,
   expandFolderId,
+  defaultExpandedIds = [],
   sidebarCollapsed,
   onSidebarCollapsedChange,
   sidebarRef,
@@ -110,7 +114,8 @@ export function ResizableWorkspace({
             onDeleteFile={onDeleteFile}
             onRenameFolder={onRenameFolder}
             onDeleteFolder={onDeleteFolder}
-            defaultExpandedIds={["folder-personal", "folder-projects"]}
+            onSetLlmAccess={onSetLlmAccess}
+            defaultExpandedIds={defaultExpandedIds}
             expandFolderId={expandFolderId}
           />
         </div>
@@ -129,7 +134,7 @@ export function ResizableWorkspace({
             <EditorPane
               fileName={fileName}
               value={markdown}
-              readOnly={readOnly}
+              llmAccessLabel={llmAccessLabel}
               onChange={onMarkdownChange}
             />
           </ResizablePanel>
