@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Brain, ChevronRight, Search, X } from "lucide-react";
+import { Brain, ChevronRight, EyeOff, Search, X } from "lucide-react";
 
 import BrainAnimation from "@/components/brain-animation";
 import { ThemeToggleButton } from "@/components/theme-toggle-button";
@@ -46,9 +46,10 @@ const DARK_CLUSTER_ACCENTS: Record<MemoryCluster, string> = {
 export function StaticBrainGraph() {
   const [isDark, setIsDark] = useState(false);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const [pinnedId, setPinnedId] = useState<string>(CORE_NODE_ID);
+  const [pinnedId, setPinnedId] = useState<string | null>(CORE_NODE_ID);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [hideUnconnectedDots, setHideUnconnectedDots] = useState(false);
   const vaults = useMemo(() => getHubVaults(), []);
 
   useEffect(() => {
@@ -71,9 +72,11 @@ export function StaticBrainGraph() {
   }, [isDark]);
 
   const previewId = hoveredId ?? pinnedId;
-  const previewNode = getMemoryById(previewId) ?? MEMORY_NODES[0];
+  const previewNode = previewId ? getMemoryById(previewId) ?? null : null;
   const brainVault = vaults[0] ?? null;
   const activeConnections = useMemo(() => {
+    if (!previewId) return [];
+
     return MEMORY_LINKS.filter(
       (link) => link.source === previewId || link.target === previewId,
     ).map((link) => {
@@ -109,7 +112,7 @@ export function StaticBrainGraph() {
 
   const handleUnselect = () => {
     setHoveredId(null);
-    setPinnedId(CORE_NODE_ID);
+    setPinnedId(null);
   };
 
   const handleOpenInVault = () => {
@@ -151,6 +154,15 @@ export function StaticBrainGraph() {
             <kbd>Cmd / Ctrl K</kbd>
           </button>
           <ThemeToggleButton />
+          <button
+            type="button"
+            className="memory-app__search static-brain-graph__toggle"
+            onClick={() => setHideUnconnectedDots((current) => !current)}
+            aria-pressed={hideUnconnectedDots}
+          >
+            <EyeOff className="size-4" />
+            <span>{hideUnconnectedDots ? "Show all dots" : "Hide unconnected dots"}</span>
+          </button>
           <button
             type="button"
             className="memory-app__icon-button"
@@ -218,7 +230,8 @@ export function StaticBrainGraph() {
             className="static-brain-graph__brain-canvas"
             graphNodes={graphNodes}
             graphLinks={MEMORY_LINKS}
-            activeNodeId={pinnedId}
+            activeNodeId={hideUnconnectedDots ? previewId : null}
+            hideUnconnectedNodes={hideUnconnectedDots}
             onNodeHover={setHoveredId}
             onNodeSelect={setPinnedId}
           />
@@ -232,92 +245,105 @@ export function StaticBrainGraph() {
           <div className="vault-pane__header static-brain-graph__panel-head">
             <p className="static-brain-graph__panel-eyebrow">Selected memory</p>
             <div className="static-brain-graph__panel-title-row">
-              <h2 className="static-brain-graph__panel-title">{previewNode.title}</h2>
+              <h2 className="static-brain-graph__panel-title">
+                {previewNode ? previewNode.title : "No memory selected"}
+              </h2>
               <span className="static-brain-graph__panel-chip">
-                {previewNode.type === "cluster" ? "cluster" : "memory"}
+                {previewNode ? (previewNode.type === "cluster" ? "cluster" : "memory") : "idle"}
               </span>
             </div>
           </div>
 
           <div className="static-brain-graph__panel-body">
-            <p className="static-brain-graph__panel-summary">{previewNode.summary}</p>
+            {previewNode ? (
+              <>
+                <p className="static-brain-graph__panel-summary">{previewNode.summary}</p>
 
-            <div className="memory-panel__actions static-brain-graph__panel-actions">
-              <button type="button" onClick={handleUnselect}>
-                Clear selection
-              </button>
-              <button type="button" onClick={handleOpenInVault} disabled={!brainVault}>
-                Open in editor
-              </button>
-            </div>
+                <div className="memory-panel__actions static-brain-graph__panel-actions">
+                  <button type="button" onClick={handleUnselect}>
+                    Clear selection
+                  </button>
+                  <button type="button" onClick={handleOpenInVault} disabled={!brainVault}>
+                    Open in editor
+                  </button>
+                </div>
 
-            <dl className="static-brain-graph__facts">
-              <div>
-                <dt>Created</dt>
-                <dd>{previewNode.createdAt}</dd>
-              </div>
-              <div>
-                <dt>Cluster</dt>
-                <dd>{previewNode.cluster}</dd>
-              </div>
-            </dl>
+                <dl className="static-brain-graph__facts">
+                  <div>
+                    <dt>Created</dt>
+                    <dd>{previewNode.createdAt}</dd>
+                  </div>
+                  <div>
+                    <dt>Cluster</dt>
+                    <dd>{previewNode.cluster}</dd>
+                  </div>
+                </dl>
 
-            <section className="static-brain-graph__section">
-              <h3>Tags</h3>
-              <div className="static-brain-graph__chips">
-                {previewNode.tags.map((tag) => (
-                  <span key={tag} className="static-brain-graph__chip">
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            </section>
-
-            <section className="static-brain-graph__section">
-              <h3>Connected links</h3>
-              <ul className="static-brain-graph__connections">
-                {activeConnections.map((connection) => (
-                  <li key={`${previewId}-${connection.other.id}`}>
-                    <button
-                      type="button"
-                      className="static-brain-graph__connection-button"
-                      onClick={() => setPinnedId(connection.other.id)}
-                      aria-label={`Open ${connection.other.title}`}
-                    >
-                      <span className="static-brain-graph__connections-target">
-                        {connection.other.title}
+                <section className="static-brain-graph__section">
+                  <h3>Tags</h3>
+                  <div className="static-brain-graph__chips">
+                    {previewNode.tags.map((tag) => (
+                      <span key={tag} className="static-brain-graph__chip">
+                        {tag}
                       </span>
-                      <ChevronRight className="size-3" />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </section>
+                    ))}
+                  </div>
+                </section>
 
-            <section className="static-brain-graph__section">
-              <h3>Sources</h3>
-              <ul className="static-brain-graph__refs">
-                {previewNode.sources.map((source) => (
-                  <li key={source}>{source}</li>
-                ))}
-              </ul>
-            </section>
+                <section className="static-brain-graph__section">
+                  <h3>Connected links</h3>
+                  <ul className="static-brain-graph__connections">
+                    {activeConnections.map((connection) => (
+                      <li key={`${previewId}-${connection.other.id}`}>
+                        <button
+                          type="button"
+                          className="static-brain-graph__connection-button"
+                          onClick={() => setPinnedId(connection.other.id)}
+                          aria-label={`Open ${connection.other.title}`}
+                        >
+                          <span className="static-brain-graph__connections-target">
+                            {connection.other.title}
+                          </span>
+                          <ChevronRight className="size-3" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
 
-            <section className="static-brain-graph__section">
-              <h3>References</h3>
-              <ul className="static-brain-graph__refs">
-                {previewNode.references.map((reference) => (
-                  <li key={reference}>{reference}</li>
-                ))}
-              </ul>
-            </section>
+                <section className="static-brain-graph__section">
+                  <h3>Sources</h3>
+                  <ul className="static-brain-graph__refs">
+                    {previewNode.sources.map((source) => (
+                      <li key={source}>{source}</li>
+                    ))}
+                  </ul>
+                </section>
+
+                <section className="static-brain-graph__section">
+                  <h3>References</h3>
+                  <ul className="static-brain-graph__refs">
+                    {previewNode.references.map((reference) => (
+                      <li key={reference}>{reference}</li>
+                    ))}
+                  </ul>
+                </section>
+              </>
+            ) : (
+              <div className="static-brain-graph__empty">
+                <p>Nothing is selected.</p>
+                <p>Pick a node, or turn on hide unconnected dots to isolate a branch.</p>
+              </div>
+            )}
           </div>
         </aside>
       </main>
 
       <footer className="static-brain-graph__footer">
         <p>These dots are embedded in the Three.js scene, so placement follows the brain itself.</p>
-        <p>{hoveredId ? "Hovering" : "Pinned"}: {previewNode.title}</p>
+        <p>
+          {hoveredId ? "Hovering" : "Pinned"}: {previewNode ? previewNode.title : "nothing selected"}
+        </p>
       </footer>
 
       <CommandDialog open={searchOpen} onOpenChange={setSearchOpen}>

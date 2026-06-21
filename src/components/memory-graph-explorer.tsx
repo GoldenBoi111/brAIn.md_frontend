@@ -678,7 +678,10 @@ export function MemoryGraphExplorer() {
   const [flowInstance, setFlowInstance] = useState<ExplorerFlow | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
-  const selectedMemory = getMemoryById(selectedIds[selectedIds.length - 1] ?? "atlas") ?? MEMORY_NODES[0];
+  const selectedMemory =
+    selectedIds.length > 0
+      ? getMemoryById(selectedIds[selectedIds.length - 1] ?? "atlas") ?? MEMORY_NODES[0]
+      : null;
 
   const searchMatches = useMemo(() => {
     const normalized = searchQuery.trim().toLowerCase();
@@ -834,9 +837,13 @@ export function MemoryGraphExplorer() {
 
   const handleClearSelection = useCallback(() => {
     setHoveredId(null);
-    setSelectedIds(["atlas"]);
-    focusMemory("atlas");
-  }, [focusMemory]);
+    setHoveredEdgeId(null);
+    setContextMenu(null);
+    setSelectedIds([]);
+    startTransition(() => {
+      flowInstance?.fitView({ padding: 0.18, duration: 220 });
+    });
+  }, [flowInstance]);
 
   const handleOpenInVault = useCallback(() => {
     window.location.assign("/vault/folder-brain-vault");
@@ -966,70 +973,85 @@ export function MemoryGraphExplorer() {
                 <FolderOpen className="size-3.5" />
                 <span>Selected memory</span>
               </div>
-              <h2 className="memory-panel__title">{selectedMemory.title}</h2>
-              <p className="memory-panel__summary">{selectedMemory.summary}</p>
+              {selectedMemory ? (
+                <>
+                  <h2 className="memory-panel__title">{selectedMemory.title}</h2>
+                  <p className="memory-panel__summary">{selectedMemory.summary}</p>
+                </>
+              ) : (
+                <>
+                  <h2 className="memory-panel__title">No memory selected</h2>
+                  <p className="memory-panel__summary">
+                    Clear selection leaves the graph open. Pick a node to inspect its notes.
+                  </p>
+                </>
+              )}
             </header>
 
-            <dl className="memory-panel__facts">
-              <div>
-                <dt>Created</dt>
-                <dd>
-                  <CalendarDays className="size-3.5" />
-                  <span>{selectedMemory.createdAt}</span>
-                </dd>
-              </div>
-              <div>
-                <dt>Cluster</dt>
-                <dd>
-                  <Hash className="size-3.5" />
-                  <span>{selectedMemory.cluster}</span>
-                </dd>
-              </div>
-              <div>
-                <dt>Sources</dt>
-                <dd>
-                  <Link2 className="size-3.5" />
-                  <span>{selectedMemory.sources.join(" | ")}</span>
-                </dd>
-              </div>
-            </dl>
+            {selectedMemory ? (
+              <>
+                <dl className="memory-panel__facts">
+                  <div>
+                    <dt>Created</dt>
+                    <dd>
+                      <CalendarDays className="size-3.5" />
+                      <span>{selectedMemory.createdAt}</span>
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Cluster</dt>
+                    <dd>
+                      <Hash className="size-3.5" />
+                      <span>{selectedMemory.cluster}</span>
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Sources</dt>
+                    <dd>
+                      <Link2 className="size-3.5" />
+                      <span>{selectedMemory.sources.join(" | ")}</span>
+                    </dd>
+                  </div>
+                </dl>
 
-            <section className="memory-panel__section">
-              <h3>Tags</h3>
-              <div className="memory-panel__chips">
-                {selectedMemory.tags.map((tag) => (
-                  <span key={tag} className="memory-panel__chip">
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            </section>
+                <section className="memory-panel__section">
+                  <h3>Tags</h3>
+                  <div className="memory-panel__chips">
+                    {selectedMemory.tags.map((tag) => (
+                      <span key={tag} className="memory-panel__chip">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </section>
 
-            <section className="memory-panel__section">
-              <h3>Linked memories</h3>
-              <ul className="memory-panel__list">
-                {panelLinked.map((memory) => (
-                  <li key={memory.id}>
-                    <button type="button" onClick={() => handleOpenMemory(memory.id)}>
-                      <span>{memory.title}</span>
-                      <ArrowRight className="size-3.5" />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </section>
+                <section className="memory-panel__section">
+                  <h3>Linked memories</h3>
+                  <ul className="memory-panel__list">
+                    {panelLinked.map((memory) => (
+                      <li key={memory.id}>
+                        <button type="button" onClick={() => handleOpenMemory(memory.id)}>
+                          <span>{memory.title}</span>
+                          <ArrowRight className="size-3.5" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
 
-            <section className="memory-panel__section">
-              <h3>Source references</h3>
-              <ul className="memory-panel__refs">
-                {panelRelated.map((memory) => (
-                  <li key={memory.id}>
-                    <span>{memory.title}</span>
-                    <span>{memory.createdAt}</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
+                <section className="memory-panel__section">
+                  <h3>Source references</h3>
+                  <ul className="memory-panel__refs">
+                    {panelRelated.map((memory) => (
+                      <li key={memory.id}>
+                        <span>{memory.title}</span>
+                        <span>{memory.createdAt}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              </>
+            ) : null}
 
             <section className="memory-panel__section">
               <h3>Actions</h3>
@@ -1040,16 +1062,20 @@ export function MemoryGraphExplorer() {
                 <button type="button" onClick={handleOpenInVault}>
                   Open in editor
                 </button>
-                <button type="button" onClick={() => handleOpenMemory(selectedMemory.id)}>
+                <button type="button" onClick={() => selectedMemory && handleOpenMemory(selectedMemory.id)} disabled={!selectedMemory}>
                   Open memory
                 </button>
-                <button type="button" onClick={() => navigator.clipboard.writeText(selectedMemory.title)}>
+                <button
+                  type="button"
+                  onClick={() => selectedMemory && navigator.clipboard.writeText(selectedMemory.title)}
+                  disabled={!selectedMemory}
+                >
                   <Copy className="size-3.5" />
                   <span>Copy title</span>
                 </button>
-                <button type="button" onClick={() => focusMemory("atlas")}>
+                <button type="button" onClick={() => focusMemory(selectedMemory?.id ?? "atlas")}>
                   <Focus className="size-3.5" />
-                  <span>Focus atlas</span>
+                  <span>Focus memory</span>
                 </button>
               </div>
             </section>
@@ -1064,7 +1090,7 @@ export function MemoryGraphExplorer() {
       <button
         type="button"
         className="memory-fab memory-fab--panel"
-        onClick={() => focusMemory(selectedMemory.id)}
+        onClick={() => focusMemory(selectedMemory?.id ?? "atlas")}
       >
         <SquareDashedMousePointer className="size-4" />
         <span>Focus</span>

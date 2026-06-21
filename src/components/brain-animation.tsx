@@ -127,6 +127,7 @@ interface BrainAnimationProps extends HTMLAttributes<HTMLDivElement> {
   graphNodes?: BrainGraphNode[];
   graphLinks?: BrainGraphLink[];
   activeNodeId?: string | null;
+  hideUnconnectedNodes?: boolean;
   onNodeHover?: (id: string | null) => void;
   onNodeSelect?: (id: string) => void;
 }
@@ -137,6 +138,7 @@ export const BrainAnimation = memo(function BrainAnimation({
   graphNodes = [],
   graphLinks = [],
   activeNodeId = null,
+  hideUnconnectedNodes = false,
   onNodeHover,
   onNodeSelect,
   className,
@@ -230,6 +232,7 @@ export const BrainAnimation = memo(function BrainAnimation({
     const graphNodes = graphNodesPropRef.current;
     const graphLinks = graphLinksPropRef.current;
     const activeId = activeNodeIdPropRef.current;
+    const shouldHideUnconnected = hideUnconnectedNodes && Boolean(activeId);
 
     if (!nodeMesh || graphNodes.length === 0) return;
 
@@ -250,7 +253,7 @@ export const BrainAnimation = memo(function BrainAnimation({
 
       const isActive = node.id === activeId;
       const isConnected = connectedIds.has(node.id);
-      const scale = isActive ? 3.2 : isConnected ? 1.9 : 1.05;
+      const scale = isActive ? 3.2 : isConnected ? 1.9 : shouldHideUnconnected ? 0.001 : 1.05;
 
       dummy.position.copy(position);
       dummy.scale.setScalar(scale);
@@ -264,7 +267,7 @@ export const BrainAnimation = memo(function BrainAnimation({
     nodeMesh.setUniformAt("uColor", index, new Color(isActive ? node.accent : isConnected ? node.accent : 0xd6d3d1));
       const nodeOpacityAttr = nodeMesh.geometry.getAttribute("instanceOpacity") as InstancedBufferAttribute | undefined;
       if (nodeOpacityAttr) {
-        nodeOpacityAttr.setX(index, isActive || isConnected ? 0.95 : 0.2);
+      nodeOpacityAttr.setX(index, isActive || isConnected ? 0.95 : shouldHideUnconnected ? 0 : activeId ? 0.2 : 0.86);
       }
     });
 
@@ -293,7 +296,7 @@ export const BrainAnimation = memo(function BrainAnimation({
       material.color.set(isActive ? (isDarkTheme ? "#2b9eb3" : "#bc3908") : activeId ? (isDarkTheme ? "#dbd5b5" : "#f6aa1c") : "#d6d3d1");
       material.opacity = isActive ? 0.72 : activeId ? 0.12 : 0.22;
     });
-  }, [isDarkTheme]);
+  }, [hideUnconnectedNodes, isDarkTheme]);
 
   const syncRotation = useCallback(() => {
     const graphGroup = threeRef.current.graphGroup;

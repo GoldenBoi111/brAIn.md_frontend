@@ -1100,6 +1100,10 @@ body {
   transform: translateY(0) scale(0.99);
 }
 
+.static-brain-graph__toggle {
+  min-width: 0;
+}
+
 .memory-app__icon-button {
   display: inline-flex;
   align-items: center;
@@ -3111,6 +3115,27 @@ select {
   padding: 0 1rem 1rem;
   overflow-y: auto;
   overscroll-behavior: contain;
+}
+
+.static-brain-graph__empty {
+  display: grid;
+  gap: 0.5rem;
+  align-content: start;
+  min-height: 100%;
+  padding: 0.25rem 0 0;
+  color: var(--foreground);
+}
+
+.static-brain-graph__empty p:first-child {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.static-brain-graph__empty p:last-child {
+  margin: 0;
+  color: var(--muted-foreground);
+  line-height: 1.6;
 }
 
 .static-brain-graph__panel-summary {
