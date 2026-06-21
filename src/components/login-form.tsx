@@ -2,17 +2,20 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Brain, Loader2, Lock, Sparkles } from "lucide-react";
 
 import { setAuthenticated } from "@/lib/auth";
+import { BackendApiError, backendApi } from "@/lib/backend-api";
 
 export function LoginForm() {
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (isLoading) return;
@@ -26,10 +29,29 @@ export function LoginForm() {
 
     setIsLoading(true);
 
-    window.setTimeout(() => {
-      setAuthenticated(email.trim());
-      window.location.assign("/dashboard");
-    }, 400);
+    try {
+      const { user } = await backendApi.login({
+        email: email.trim(),
+        password,
+      });
+
+      setAuthenticated(user.email);
+
+      const nextPath = searchParams.get("next");
+      const destination =
+        nextPath?.startsWith("/") && !nextPath.startsWith("//")
+          ? nextPath
+          : "/dashboard";
+
+      window.location.assign(destination);
+    } catch (err) {
+      setIsLoading(false);
+      if (err instanceof BackendApiError) {
+        setError(err.message);
+        return;
+      }
+      setError("Something went wrong. Please try again.");
+    }
   };
 
   return (
@@ -40,7 +62,7 @@ export function LoginForm() {
         </div>
         <h1 className="login-page__title">brAIn.md</h1>
         <p className="login-page__subtitle">
-          Sign in to open your local markdown vault
+          Sign in to open your markdown vault
         </p>
       </div>
 
@@ -120,7 +142,7 @@ export function LoginForm() {
         <div className="mt-6 space-y-3 border-t border-border/60 pt-5">
           <div className="login-card__hint">
             <Lock className="size-4" />
-            <span>Your notes stay on your machine. Nothing leaves this device.</span>
+            <span>Secure sign-in to access your vault and notes.</span>
           </div>
           <div className="login-card__hint">
             <Sparkles className="size-4" />

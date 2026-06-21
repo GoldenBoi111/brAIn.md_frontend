@@ -1,15 +1,22 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-import { AUTH_COOKIE_NAME, isAuthenticatedRequest } from "@/lib/auth";
+import { AUTH_COOKIE_NAME, isAuthenticatedRequest, SESSION_COOKIE_NAME } from "@/lib/auth";
 
 const AUTH_ROUTES = ["/login", "/signup"];
 const PROTECTED_PREFIXES = ["/dashboard", "/vault", "/mind"];
 
+function hasSession(request: NextRequest): boolean {
+  const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+  const legacyCookie = request.cookies.get(AUTH_COOKIE_NAME)?.value;
+  return (
+    isAuthenticatedRequest(sessionCookie) || isAuthenticatedRequest(legacyCookie)
+  );
+}
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const authCookie = request.cookies.get(AUTH_COOKIE_NAME)?.value;
-  const isAuthenticated = isAuthenticatedRequest(authCookie);
+  const isAuthenticated = hasSession(request);
 
   if (pathname === "/") {
     const destination = isAuthenticated ? "/dashboard" : "/login";

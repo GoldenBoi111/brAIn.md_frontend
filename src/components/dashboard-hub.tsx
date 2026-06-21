@@ -13,6 +13,7 @@ import {
 
 import { CreateFolderDialog } from "@/components/create-folder-dialog";
 import { clearAuthenticatedSession } from "@/lib/auth";
+import { backendApi } from "@/lib/backend-api";
 import {
   createHubVault,
   getFileTree,
@@ -28,7 +29,13 @@ export function DashboardHub() {
     setVaults(getHubVaults());
   }, []);
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
+    try {
+      await backendApi.logout();
+    } catch {
+      // Still sign out locally if the API is unreachable.
+    }
+
     clearAuthenticatedSession();
     window.location.assign("/login");
   };
