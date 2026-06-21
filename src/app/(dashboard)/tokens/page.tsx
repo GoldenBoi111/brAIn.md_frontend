@@ -15,7 +15,7 @@ export default function TokensPage() {
           <Brain className="size-4" />
           <div>
             <p className="backend-page__eyebrow">Token administration</p>
-            <h1 className="backend-page__title">Tokens and provider images</h1>
+            <h1 className="backend-page__title">Tokens and visual identities</h1>
           </div>
         </div>
 
@@ -59,7 +59,7 @@ export default function TokensPage() {
             <strong>Editable</strong>
           </div>
           <div className="backend-page__hero-stat">
-            <span>Provider images</span>
+            <span>Visual identities</span>
             <strong>Selectable</strong>
           </div>
         </div>

@@ -23,6 +23,7 @@ import {
 } from "@/lib/mock-data";
 import { getLlmAccess, getLlmAccessLabel } from "@/lib/llm-access";
 import { getFileTree } from "@/lib/vault-catalog";
+import { loadVaultFileContents, saveVaultFileContents } from "@/lib/vault-contents";
 import { cn } from "@/lib/utils";
 import {
   collectFileIdsInSubtree,
@@ -98,7 +99,7 @@ export function AppShell({ folderId }: AppShellProps) {
     () => initialVaultState.selectedId,
   );
   const [fileContents, setFileContents] = useState<Record<string, string>>(
-    () => ({ ...MOCK_FILE_CONTENTS }),
+    () => ({ ...MOCK_FILE_CONTENTS, ...loadVaultFileContents() }),
   );
 
   const selectedFile = useMemo(
@@ -134,6 +135,10 @@ export function AppShell({ folderId }: AppShellProps) {
     },
     [selectedFileId],
   );
+
+  const handleSaveMarkdown = useCallback(() => {
+    saveVaultFileContents(fileContents);
+  }, [fileContents]);
 
   const openCreateDialog = useCallback((parentFolderId: string | null) => {
     setCreateParentFolderId(parentFolderId);
@@ -398,6 +403,8 @@ export function AppShell({ folderId }: AppShellProps) {
           markdown={markdown}
           llmAccessLabel={llmAccessLabel}
           onMarkdownChange={handleMarkdownChange}
+          onSaveMarkdown={handleSaveMarkdown}
+          canSaveMarkdown={Boolean(selectedFileId)}
           selectedFileId={selectedFileId}
           onSelectFile={handleSelectFile}
           onCreateFile={handleExplorerCreate}

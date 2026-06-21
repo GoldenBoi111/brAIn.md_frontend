@@ -5,6 +5,8 @@ interface EditorPaneProps {
   value: string;
   llmAccessLabel?: string | null;
   onChange: (value: string) => void;
+  onSave?: () => void;
+  canSave?: boolean;
 }
 
 export function EditorPane({
@@ -12,6 +14,8 @@ export function EditorPane({
   value,
   llmAccessLabel,
   onChange,
+  onSave,
+  canSave = true,
 }: EditorPaneProps) {
   return (
     <div className="vault-pane vault-pane--editor flex h-full flex-col">
@@ -27,6 +31,16 @@ export function EditorPane({
           <span className="ml-auto text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
             {llmAccessLabel}
           </span>
+        )}
+        {onSave && (
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={!canSave}
+            className="ml-2 rounded border border-border/60 px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Save
+          </button>
         )}
       </header>
       <textarea

@@ -18,7 +18,8 @@ type TokenProviderId =
   | "google"
   | "mistral"
   | "cohere"
-  | "perplexity";
+  | "perplexity"
+  | "custom";
 
 type TokenRecord = {
   id: string;
@@ -26,6 +27,7 @@ type TokenRecord = {
   provider: TokenProviderId;
   providerName: string;
   providerUrl: string;
+  providerImageUrl: string;
   token: string;
   createdAt: string;
   refreshedAt: string;
@@ -100,6 +102,15 @@ const PROVIDERS: ProviderOption[] = [
     imageUrl: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ753TVIYg-ypZWC8TCPgmPlvpaZDQ3SYNCYZ-r3b256A&s=10",
     sourceUrl: "https://www.perplexity.ai",
   },
+  {
+    id: "custom",
+    name: "Custom",
+    accent: "#f6aa1c",
+    background: "#fff6df",
+    initials: "CU",
+    imageUrl: "",
+    sourceUrl: "https://example.com",
+  },
 ];
 
 function getProviderDefaults(provider: TokenProviderId): ProviderOption {
@@ -113,6 +124,7 @@ const DEFAULT_TOKENS: TokenRecord[] = [
     provider: "openai",
     providerName: "OpenAI",
     providerUrl: "https://openai.com",
+    providerImageUrl: "https://openai.com/favicon.ico",
     token: "tk_openai_docs_bot_seed",
     createdAt: "2026-06-21T12:00:00.000Z",
     refreshedAt: "2026-06-21T12:00:00.000Z",
@@ -125,6 +137,7 @@ const DEFAULT_TOKENS: TokenRecord[] = [
     provider: "anthropic",
     providerName: "Anthropic",
     providerUrl: "https://www.anthropic.com",
+    providerImageUrl: "https://www.anthropic.com/favicon.ico",
     token: "tk_anthropic_relay_seed",
     createdAt: "2026-06-21T12:00:00.000Z",
     refreshedAt: "2026-06-21T12:00:00.000Z",
@@ -137,6 +150,7 @@ const DEFAULT_TOKENS: TokenRecord[] = [
     provider: "google",
     providerName: "Google",
     providerUrl: "https://www.google.com",
+    providerImageUrl: "https://www.google.com/favicon.ico",
     token: "tk_google_sync_seed",
     createdAt: "2026-06-21T12:00:00.000Z",
     refreshedAt: "2026-06-21T12:00:00.000Z",
@@ -173,6 +187,7 @@ function normalizeTokenRecord(record: Partial<TokenRecord>): TokenRecord {
     provider: provider.id,
     providerName: record.providerName ?? provider.name,
     providerUrl: record.providerUrl ?? provider.sourceUrl,
+    providerImageUrl: record.providerImageUrl ?? provider.imageUrl,
     token: record.token ?? `tk_${getRandomHex(18)}`,
     createdAt: record.createdAt ?? new Date().toISOString(),
     refreshedAt: record.refreshedAt ?? new Date().toISOString(),
@@ -186,6 +201,7 @@ function createTokenRecord(
   providerId: TokenProviderId,
   providerName: string,
   providerUrl: string,
+  providerImageUrl: string,
 ): TokenRecord {
   const provider = getProviderDefaults(providerId);
   const now = new Date().toISOString();
@@ -196,6 +212,7 @@ function createTokenRecord(
     provider: provider.id,
     providerName,
     providerUrl,
+    providerImageUrl: providerImageUrl || provider.imageUrl,
     token: `tk_${getRandomHex(18)}`,
     createdAt: now,
     refreshedAt: now,
@@ -256,12 +273,42 @@ function PermissionModeBadge({
   );
 }
 
-function ProviderBadge({ provider }: { provider: ProviderOption }) {
+function ProviderBadge({
+  provider,
+  imageUrl,
+}: {
+  provider: ProviderOption;
+  imageUrl?: string;
+}) {
   const [failed, setFailed] = useState(false);
+  const resolvedImageUrl = provider.id === "custom" ? imageUrl?.trim() ?? "" : providerAvatar(provider);
 
   useEffect(() => {
     setFailed(false);
-  }, [provider.imageUrl]);
+  }, [resolvedImageUrl]);
+
+  if (provider.id === "custom") {
+    if (resolvedImageUrl && !failed) {
+      return (
+        <img
+          src={resolvedImageUrl}
+          alt={`${provider.name} logo`}
+          onError={() => setFailed(true)}
+          loading="lazy"
+          referrerPolicy="no-referrer"
+        />
+      );
+    }
+
+    return (
+      <span
+        className="backend-token-admin__provider-fallback backend-token-admin__provider-fallback--custom"
+        style={{ background: provider.background, color: provider.accent }}
+      >
+        {provider.name}
+      </span>
+    );
+  }
 
   if (failed) {
     return (
@@ -276,7 +323,7 @@ function ProviderBadge({ provider }: { provider: ProviderOption }) {
 
   return (
     <img
-      src={providerAvatar(provider)}
+      src={resolvedImageUrl}
       alt={`${provider.name} logo`}
       onError={() => setFailed(true)}
       loading="lazy"
@@ -292,6 +339,7 @@ export function BackendTokenAdmin() {
   const [draftProvider, setDraftProvider] = useState<TokenProviderId>("mistral");
   const [draftProviderName, setDraftProviderName] = useState(getProviderDefaults("mistral").name);
   const [draftProviderUrl, setDraftProviderUrl] = useState(getProviderDefaults("mistral").sourceUrl);
+  const [draftProviderImageUrl, setDraftProviderImageUrl] = useState(getProviderDefaults("mistral").imageUrl);
   const [copiedTokenId, setCopiedTokenId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -321,15 +369,21 @@ export function BackendTokenAdmin() {
       draftProvider,
       draftProviderName.trim() || provider.name,
       draftProviderUrl.trim() || provider.sourceUrl,
+      draftProviderImageUrl.trim() || provider.imageUrl,
     );
     setTokens((current) => [nextToken, ...current]);
     setDraftName("");
     setDraftProvider("openai");
     setDraftProviderName(providerLookup.openai.name);
     setDraftProviderUrl(providerLookup.openai.sourceUrl);
+    setDraftProviderImageUrl(providerLookup.openai.imageUrl);
   };
 
-  const handleUpdateTokenField = (tokenId: string, field: "name" | "providerName" | "providerUrl", value: string) => {
+  const handleUpdateTokenField = (
+    tokenId: string,
+    field: "name" | "providerName" | "providerUrl" | "providerImageUrl",
+    value: string,
+  ) => {
     setTokens((current) =>
       current.map((token) => (token.id === tokenId ? { ...token, [field]: value } : token)),
     );
@@ -367,6 +421,7 @@ export function BackendTokenAdmin() {
     setDraftProvider(provider);
     setDraftProviderName(selected.name);
     setDraftProviderUrl(selected.sourceUrl);
+    setDraftProviderImageUrl(selected.imageUrl);
   };
 
   return (
@@ -374,9 +429,9 @@ export function BackendTokenAdmin() {
       <div className="backend-token-admin__head">
         <div>
           <p className="backend-page__eyebrow">Token administration</p>
-          <h3 className="backend-token-admin__title">Generate, rename, refresh, and retire tokens.</h3>
-          <p className="backend-token-admin__lede">
-            Keep the controls local for now. The tokens can be named, refreshed, deleted, tagged with a provider image,
+            <h3 className="backend-token-admin__title">Generate, rename, refresh, and retire tokens.</h3>
+            <p className="backend-token-admin__lede">
+            Keep the controls local for now. The tokens can be named, refreshed, deleted, tagged with a visual identity,
             and assigned token-scoped vault rules without turning on a backend.
           </p>
         </div>
@@ -405,8 +460,8 @@ export function BackendTokenAdmin() {
 
         <div className="backend-token-admin__provider-picker">
           <div className="backend-token-admin__provider-label">
-            <span>Provider image</span>
-            <span>Choose one of the visual identities</span>
+            <span>Visual identity</span>
+            <span>Choose a provider or a custom identity for this token</span>
           </div>
           <div className="backend-token-admin__provider-grid">
             {PROVIDERS.map((provider) => {
@@ -445,6 +500,16 @@ export function BackendTokenAdmin() {
                 placeholder="https://www.perplexity.ai"
               />
             </label>
+            {draftProvider === "custom" ? (
+              <label className="backend-token-admin__field backend-token-admin__field--compact">
+                <span>Identity image URL</span>
+                <input
+                  value={draftProviderImageUrl}
+                  onChange={(event) => setDraftProviderImageUrl(event.target.value)}
+                  placeholder="https://example.com/logo.png"
+                />
+              </label>
+            ) : null}
           </div>
         </div>
 
@@ -462,7 +527,7 @@ export function BackendTokenAdmin() {
             <article key={token.id} className="backend-token-admin__card">
               <div className="backend-token-admin__card-head">
                 <div className="backend-token-admin__identity">
-                  <ProviderBadge provider={provider} />
+                  <ProviderBadge provider={provider} imageUrl={token.providerImageUrl} />
                   <div>
                     <p>{token.providerName}</p>
                     <a href={token.providerUrl} target="_blank" rel="noreferrer">
@@ -499,6 +564,17 @@ export function BackendTokenAdmin() {
                     }
                   />
                 </label>
+                {token.provider === "custom" ? (
+                  <label className="backend-token-admin__field backend-token-admin__field--compact">
+                    <span>Identity image URL</span>
+                    <input
+                      value={token.providerImageUrl}
+                      onChange={(event) =>
+                        handleUpdateTokenField(token.id, "providerImageUrl", event.target.value)
+                      }
+                    />
+                  </label>
+                ) : null}
               </div>
 
               <div className="backend-token-admin__token-row">
@@ -570,7 +646,7 @@ export function BackendTokenAdmin() {
                         ),
                       )
                     }
-                  >
+                    >
                     <ProviderBadge provider={providerOption} />
                     <span>{providerOption.name}</span>
                   </button>

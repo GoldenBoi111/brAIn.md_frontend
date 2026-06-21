@@ -6,7 +6,14 @@ import { useEffect, useMemo, useState } from "react";
 
 import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
-type TokenProviderId = "openai" | "anthropic" | "google" | "mistral" | "cohere" | "perplexity";
+type TokenProviderId =
+  | "openai"
+  | "anthropic"
+  | "google"
+  | "mistral"
+  | "cohere"
+  | "perplexity"
+  | "custom";
 
 type TokenRecord = {
   id: string;
@@ -14,6 +21,7 @@ type TokenRecord = {
   provider: TokenProviderId;
   providerName: string;
   providerUrl: string;
+  providerImageUrl: string;
   token: string;
   createdAt: string;
   refreshedAt: string;
@@ -35,6 +43,7 @@ function normalizeTokenRecord(record: Partial<TokenRecord>): TokenRecord {
     provider: (record.provider ?? "openai") as TokenProviderId,
     providerName: record.providerName ?? "OpenAI",
     providerUrl: record.providerUrl ?? "https://openai.com",
+    providerImageUrl: record.providerImageUrl ?? "https://openai.com/favicon.ico",
     token: record.token ?? "tk_unknown",
     createdAt: record.createdAt ?? new Date().toISOString(),
     refreshedAt: record.refreshedAt ?? new Date().toISOString(),
