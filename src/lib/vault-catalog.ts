@@ -1,13 +1,9 @@
 import { MOCK_FILE_TREE, MOCK_VAULTS, type MockVault } from "@/lib/mock-data";
-import {
-  collectFiles,
-  createFolderInTree,
-  findFileNode,
-} from "@/lib/vault";
+import { collectFiles, createFolderInTree, findFileNode } from "@/lib/vault";
 import type { FileNode } from "@/types/file-tree";
 
-const USER_VAULTS_KEY = "brain-md-user-vaults";
 const USER_FOLDERS_KEY = "brain-md-user-folders";
+const ROOT_VAULT_ID = MOCK_VAULTS[0]?.id ?? "folder-brain-vault";
 
 function readJson<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback;
@@ -30,43 +26,41 @@ export function getUserFolders(): FileNode[] {
   return readJson<FileNode[]>(USER_FOLDERS_KEY, []);
 }
 
-export function getUserVaults(): MockVault[] {
-  return readJson<MockVault[]>(USER_VAULTS_KEY, []);
-}
-
-/** Full mock tree including user-created top-level vault folders. */
+/** Full mock tree including user-created subfolders inside the brain vault. */
 export function getFileTree(): FileNode[] {
-  return [...MOCK_FILE_TREE, ...getUserFolders()];
+  const [rootVault] = MOCK_FILE_TREE;
+  if (!rootVault) return [];
+
+  return [
+    {
+      ...rootVault,
+      children: [...(rootVault.children ?? []), ...getUserFolders()],
+    },
+  ];
 }
 
 export function getHubVaults(): MockVault[] {
-  const userVaults = getUserVaults().map((vault) => {
-    const folder = findFileNode(getFileTree(), vault.id);
-    const fileCount = folder ? collectFiles([folder]).length : vault.fileCount;
-    return { ...vault, fileCount };
-  });
+  const tree = getFileTree();
+  const rootVault = findFileNode(tree, ROOT_VAULT_ID);
+  const fileCount = rootVault ? collectFiles([rootVault]).length : MOCK_VAULTS[0]?.fileCount ?? 0;
 
-  return [...MOCK_VAULTS, ...userVaults];
+  return [
+    {
+      ...MOCK_VAULTS[0],
+      fileCount,
+    },
+  ].filter((vault): vault is MockVault => Boolean(vault));
 }
 
 export function getVaultFolderId(folderId: string): string | null {
-  return getHubVaults().some((vault) => vault.id === folderId) ? folderId : null;
+  return findFileNode(getFileTree(), folderId)?.type === "folder" ? folderId : null;
 }
 
-export function createHubVault(rawName: string): MockVault {
+export function createHubVault(rawName: string): FileNode {
   const tree = getFileTree();
-  const { folder } = createFolderInTree(tree, null, rawName);
-  const name = folder.name;
-
-  const vault: MockVault = {
-    id: folder.id,
-    name,
-    description: "Empty vault · add notes inside.",
-    fileCount: 0,
-  };
+  const { folder } = createFolderInTree(tree, ROOT_VAULT_ID, rawName);
 
   writeJson(USER_FOLDERS_KEY, [...getUserFolders(), folder]);
-  writeJson(USER_VAULTS_KEY, [...getUserVaults(), vault]);
 
-  return vault;
+  return folder;
 }

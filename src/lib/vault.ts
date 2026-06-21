@@ -1,5 +1,9 @@
 import type { FileNode, LlmAccess } from "@/types/file-tree";
 
+function todayIsoDate(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
 export function findFileNode(
   nodes: FileNode[],
   id: string,
@@ -194,6 +198,7 @@ export function createFileInTree(
     id: createFileId(),
     name,
     type: "file",
+    createdAt: todayIsoDate(),
   };
 
   return {
@@ -384,6 +389,7 @@ export function createFolderInTree(
     id: createFolderId(),
     name,
     type: "folder",
+    createdAt: todayIsoDate(),
     children: [],
   };
 

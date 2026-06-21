@@ -6,7 +6,8 @@ export interface FileNode {
   id: string;
   name: string;
   type: FileNodeType;
-  /** AI access policy — files only; omit = "default" */
+  createdAt?: string;
+  /** AI access policy - files only; omit = "default" */
   llmAccess?: LlmAccess;
   children?: FileNode[];
 }

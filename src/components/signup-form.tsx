@@ -2,15 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Brain, Loader2, Lock, Sparkles } from "lucide-react";
+import { ArrowRight, Brain, Loader2, Lock, Sparkles } from "lucide-react";
 
-import FadeContent from "@/components/FadeContent";
-import GlareHover from "@/components/GlareHover";
-import GradientText from "@/components/GradientText";
 import { setAuthenticated } from "@/lib/auth";
-import { BackendApiError, backendApi } from "@/lib/backend-api";
-
-const BRAND_GRADIENT = ["#a78bfa", "#fafafa", "#818cf8"];
 
 export function SignupForm() {
   const [email, setEmail] = useState("");
@@ -39,55 +33,32 @@ export function SignupForm() {
     setIsLoading(true);
 
     try {
-      const { user } = await backendApi.register({
-        email: email.trim(),
-        password,
-      });
-
-      setAuthenticated(user.email);
+      setAuthenticated(email.trim());
       window.location.assign("/dashboard");
-    } catch (err) {
+    } catch {
       setIsLoading(false);
-      if (err instanceof BackendApiError) {
-        setError(err.message);
-        return;
-      }
       setError("Something went wrong. Please try again.");
     }
   };
 
   return (
-    <>
-      <FadeContent blur duration={900} delay={0} threshold={0.05}>
-        <div className="login-page__brand">
-          <div className="login-page__logo">
-            <Brain className="size-7 text-foreground" />
-          </div>
-          <GradientText
-            colors={BRAND_GRADIENT}
-            animationSpeed={6}
-            className="login-page__title mx-auto inline-flex"
-          >
-            brAIn.md
-          </GradientText>
-          <p className="login-page__subtitle">
-            Create an account to start your vault
-          </p>
+    <section className="login-page__stack">
+      <div className="login-page__brand">
+        <div className="login-page__logo">
+          <Brain className="size-6 text-foreground" />
         </div>
-      </FadeContent>
+        <p className="login-page__eyebrow">Personal memory graph</p>
+        <h1 className="login-page__title">Start a fresh notebook vault</h1>
+        <p className="login-page__subtitle">
+          Create an account for the AI-connected vault, then begin linking notes into the graph immediately.
+        </p>
+      </div>
 
-      <FadeContent blur duration={900} delay={120} threshold={0.05}>
-      <GlareHover
-        width="100%"
-        height="auto"
-        background="var(--card)"
-        borderColor="var(--border)"
-        borderRadius="1rem"
-        glareColor="#a78bfa"
-        glareOpacity={0.28}
-        className="login-card !block w-full !cursor-default !place-items-stretch"
-        style={{ width: "100%", display: "block" }}
-      >
+      <section className="login-card" aria-labelledby="signup-card-title">
+        <h2 id="signup-card-title" className="sr-only">
+          Sign up form
+        </h2>
+
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="login-card__field">
             <label htmlFor="signup-email" className="login-card__label">
@@ -154,30 +125,29 @@ export function SignupForm() {
                 Creating account...
               </>
             ) : (
-              "Create account"
+              <>
+                Create account
+                <ArrowRight className="size-4" />
+              </>
             )}
           </button>
         </form>
 
-        <div className="mt-6 space-y-3 border-t border-border/60 pt-5">
-          <div className="login-card__hint">
-            <Lock className="size-4" />
-            <span>Secure sign-up to start organizing your vault.</span>
-          </div>
+        <div className="login-card__notes">
           <div className="login-card__hint">
             <Sparkles className="size-4" />
-            <span>After sign-up you&apos;ll land on your vault hub.</span>
+            <span>AI connectivity keeps search, linking, and recall close to the graph.</span>
+          </div>
+          <div className="login-card__hint">
+            <Lock className="size-4" />
+            <span>Your account stays local for this prototype, then opens the graph right away.</span>
           </div>
         </div>
-      </GlareHover>
-      </FadeContent>
+      </section>
 
-      <FadeContent blur duration={800} delay={220} threshold={0.05}>
-        <p className="login-page__footer">
-          Already have an account?{" "}
-          <Link href="/login">Sign in</Link>
-        </p>
-      </FadeContent>
-    </>
+      <p className="login-page__footer">
+        Already have an account? <Link href="/login">Sign in</Link>
+      </p>
+    </section>
   );
 }

@@ -1,5 +1,5 @@
-import { MindGraph } from "@/components/mind-graph";
+import { StaticBrainGraph } from "@/components/static-brain-graph";
 
 export default function MindPage() {
-  return <MindGraph />;
+  return <StaticBrainGraph />;
 }

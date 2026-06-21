@@ -22,6 +22,7 @@ const PREVIEW_MIN_SIZE = 25;
 const PREVIEW_COLLAPSED_SIZE = 0;
 
 interface ResizableWorkspaceProps {
+  vaultName: string;
   fileTree: FileNode[];
   fileName: string | null;
   markdown: string;
@@ -48,6 +49,7 @@ interface ResizableWorkspaceProps {
 }
 
 export function ResizableWorkspace({
+  vaultName,
   fileTree,
   fileName,
   markdown,
@@ -73,7 +75,7 @@ export function ResizableWorkspace({
   previewRef,
 }: ResizableWorkspaceProps) {
   return (
-    <ResizablePanelGroup direction="horizontal" className="h-full">
+    <ResizablePanelGroup direction="horizontal" className="vault-split h-full">
       <ResizablePanel
         ref={sidebarRef}
         id="sidebar"
@@ -85,19 +87,20 @@ export function ResizableWorkspace({
         onCollapse={() => onSidebarCollapsedChange(true)}
         onExpand={() => onSidebarCollapsedChange(false)}
         className={cn(
-          "bg-sidebar",
+          "vault-split__sidebar bg-sidebar",
           sidebarCollapsed && "min-w-0 overflow-hidden",
         )}
       >
-        <div className="flex h-full flex-col">
-          <div className="flex h-8 shrink-0 items-center justify-between px-3">
-            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-              Explorer
-            </span>
+        <div className="vault-split__panel">
+          <div className="vault-split__panel-head">
+            <div className="vault-split__panel-copy">
+              <span className="vault-split__panel-kicker">Vault</span>
+              <span className="vault-split__panel-title">{vaultName}</span>
+            </div>
             <button
               type="button"
               onClick={onCreateFile}
-              className="inline-flex size-6 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground"
+              className="vault-shell__icon-button vault-shell__icon-button--small"
               aria-label="Create new note"
               title="Create new note"
             >
@@ -130,6 +133,7 @@ export function ResizableWorkspace({
             order={1}
             defaultSize={previewCollapsed ? 100 : PREVIEW_DEFAULT_SIZE}
             minSize={25}
+            className="vault-split__editor"
           >
             <EditorPane
               fileName={fileName}
@@ -151,7 +155,7 @@ export function ResizableWorkspace({
             collapsible
             onCollapse={() => onPreviewCollapsedChange(true)}
             onExpand={() => onPreviewCollapsedChange(false)}
-            className={cn(previewCollapsed && "min-w-0 overflow-hidden")}
+            className={cn("vault-split__preview", previewCollapsed && "min-w-0 overflow-hidden")}
           >
             <PreviewPane fileName={fileName} content={markdown} />
           </ResizablePanel>
