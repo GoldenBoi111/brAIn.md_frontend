@@ -251,8 +251,8 @@ export const BACKEND_SECTIONS: BackendSection[] = [
         title: "Create token",
         auth: "Session",
         purpose: "Create a tenant token.",
-        payload: "{ subject, tokenName?, scopes?, readRoots?, writeRoots? }",
-        response: "{ api_version, tenant_id, token_id, token_name, token }",
+        payload: "{ subject, tokenName?, scopes?, readRoots?, writeRoots?, avatarProvider?, avatarImage?, lockedPaths?, readOnlyPaths? }",
+        response: "{ api_version, tenant_id, token_id, token_name, token, avatar_provider?, locked_paths?, read_only_paths? }",
       },
       {
         method: "POST",
@@ -261,7 +261,7 @@ export const BACKEND_SECTIONS: BackendSection[] = [
         auth: "Session",
         purpose: "Issue an MCP token for downstream use.",
         payload: "Same as /api/tokens",
-        response: "{ api_version, tenant_id, token_id, token_name, token }",
+        response: "{ api_version, tenant_id, token_id, token_name, token, avatar_provider?, locked_paths?, read_only_paths? }",
       },
       {
         method: "GET",

@@ -177,6 +177,7 @@ export const BrainAnimation = memo(function BrainAnimation({
     nodeMesh: null as InstancedUniformsMesh | null,
     linkGroup: null as Group | null,
     nodeLookup: new Map<string, number>(),
+    nodeVertexIndices: new Set<number>(),
     nodePositions: new Map<string, Vector3>(),
     linkMaterials: [] as LineBasicMaterial[],
   });
@@ -229,6 +230,7 @@ export const BrainAnimation = memo(function BrainAnimation({
     const brainMesh = threeRef.current.brainMesh;
     const linkMaterials = threeRef.current.linkMaterials;
     const nodePositions = threeRef.current.nodePositions;
+    const nodeVertexIndices = threeRef.current.nodeVertexIndices;
     const graphNodes = graphNodesPropRef.current;
     const graphLinks = graphLinksPropRef.current;
     const activeId = activeNodeIdPropRef.current;
@@ -253,7 +255,7 @@ export const BrainAnimation = memo(function BrainAnimation({
 
       const isActive = node.id === activeId;
       const isConnected = connectedIds.has(node.id);
-      const scale = isActive ? 3.2 : isConnected ? 1.9 : shouldHideUnconnected ? 0.001 : 1.05;
+      const scale = isActive ? 3.2 : isConnected ? 1.9 : 1.05;
 
       dummy.position.copy(position);
       dummy.scale.setScalar(scale);
@@ -267,7 +269,7 @@ export const BrainAnimation = memo(function BrainAnimation({
     nodeMesh.setUniformAt("uColor", index, new Color(isActive ? node.accent : isConnected ? node.accent : 0xd6d3d1));
       const nodeOpacityAttr = nodeMesh.geometry.getAttribute("instanceOpacity") as InstancedBufferAttribute | undefined;
       if (nodeOpacityAttr) {
-      nodeOpacityAttr.setX(index, isActive || isConnected ? 0.95 : shouldHideUnconnected ? 0 : activeId ? 0.2 : 0.86);
+      nodeOpacityAttr.setX(index, isActive || isConnected ? 0.98 : activeId ? 0.78 : 0.86);
       }
     });
 
@@ -282,7 +284,13 @@ export const BrainAnimation = memo(function BrainAnimation({
       if (brainOpacityAttr) {
         const dimOpacity = activeId ? 0.18 : 0.86;
         for (let index = 0; index < brainOpacityAttr.count; index += 1) {
-          brainOpacityAttr.setX(index, dimOpacity);
+          const isDocumentVertex = nodeVertexIndices.has(index);
+          if (shouldHideUnconnected && !isDocumentVertex) {
+            brainOpacityAttr.setX(index, 0);
+            continue;
+          }
+
+          brainOpacityAttr.setX(index, isDocumentVertex ? dimOpacity : activeId ? 0.06 : 0.86);
         }
         brainOpacityAttr.needsUpdate = true;
       }
@@ -373,6 +381,8 @@ export const BrainAnimation = memo(function BrainAnimation({
             }
 
             usedIndices.add(candidate);
+            threeRef.current.nodeLookup.set(node.id, candidate);
+            threeRef.current.nodeVertexIndices.add(candidate);
 
             const position = new Vector3(
               positions[candidate * 3 + 0],
@@ -384,6 +394,7 @@ export const BrainAnimation = memo(function BrainAnimation({
           });
 
           threeRef.current.nodePositions = nodePositions;
+          threeRef.current.nodeVertexIndices = usedIndices;
 
           const brainOpacityAttr = new InstancedBufferAttribute(new Float32Array(count), 1);
           instancedMesh.geometry.setAttribute("instanceOpacity", brainOpacityAttr);
@@ -585,6 +596,7 @@ export const BrainAnimation = memo(function BrainAnimation({
       three.nodeMesh = null;
       three.linkGroup = null;
       three.nodeLookup = new Map();
+      three.nodeVertexIndices = new Set();
       three.nodePositions = new Map();
       three.linkMaterials = [];
       loaderRef.current = null;

@@ -267,6 +267,9 @@ export async function createMockBackendResponse(
           {
             token_id: "token-visual-1",
             token_name: "docs-bot",
+            avatar_provider: "openai",
+            locked_paths: ["Brain Vault / Research"],
+            read_only_paths: ["Brain Vault / Projects"],
             scopes: ["mcp"],
             read_roots: ["docs"],
             write_roots: ["docs"],
@@ -277,7 +280,16 @@ export async function createMockBackendResponse(
   }
 
   if (pathname === "/api/tokens" && method === "POST") {
-    const body = (await request.json().catch(() => ({}))) as { tokenName?: string; token_name?: string };
+    const body = (await request.json().catch(() => ({}))) as {
+      tokenName?: string;
+      token_name?: string;
+      avatarProvider?: string;
+      avatar_provider?: string;
+      lockedPaths?: string[];
+      locked_paths?: string[];
+      readOnlyPaths?: string[];
+      read_only_paths?: string[];
+    };
     return {
       status: 201,
       body: {
@@ -286,6 +298,9 @@ export async function createMockBackendResponse(
         token_id: "token-visual-1",
         token_name: body.tokenName ?? body.token_name ?? "docs-bot",
         token: "mcp_mock_token",
+        avatar_provider: body.avatarProvider ?? body.avatar_provider ?? "openai",
+        locked_paths: body.lockedPaths ?? body.locked_paths ?? [],
+        read_only_paths: body.readOnlyPaths ?? body.read_only_paths ?? [],
       },
     };
   }
@@ -299,6 +314,9 @@ export async function createMockBackendResponse(
         token_id: "token-visual-1",
         token_name: "docs-bot",
         token: "mcp_mock_token",
+        avatar_provider: "openai",
+        locked_paths: ["Brain Vault / Research"],
+        read_only_paths: ["Brain Vault / Projects"],
       },
     };
   }
@@ -310,6 +328,7 @@ export async function createMockBackendResponse(
         token_id: tokenId,
         tenant_id: "brain-vault",
         token_name: "docs-bot",
+        avatar_provider: "openai",
         subject: "ui",
         scopes: ["mcp"],
         scope_path: ".",

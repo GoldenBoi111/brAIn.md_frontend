@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowLeft, ArrowUpRight, Brain, PlugZap, Shield, X } from "lucide-react";
 
+import { BackendTokenAdmin } from "@/components/backend-token-admin";
 import { ThemeToggleButton } from "@/components/theme-toggle-button";
 import { clearAuthenticatedSession } from "@/lib/auth";
 import { BACKEND_NOTES, BACKEND_SECTIONS } from "@/lib/backend-spec";
@@ -73,6 +74,8 @@ export function BackendBridge() {
           </article>
         ))}
       </section>
+
+      <BackendTokenAdmin />
 
       <section className="backend-page__sections">
         {BACKEND_SECTIONS.map((section) => (

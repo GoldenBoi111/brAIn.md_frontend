@@ -91,6 +91,7 @@ export function StaticBrainGraph() {
   const siteLinks = useMemo(
     () => [
       { href: "/dashboard", label: "Dashboard", description: "Vault hub and recent-file insights." },
+      { href: "/tokens", label: "Tokens", description: "Token names, images, and vault permissions." },
       { href: "/mind", label: "Mind map", description: "Open the brain-centered atlas." },
     ],
     [],
@@ -230,7 +231,7 @@ export function StaticBrainGraph() {
             className="static-brain-graph__brain-canvas"
             graphNodes={graphNodes}
             graphLinks={MEMORY_LINKS}
-            activeNodeId={hideUnconnectedDots ? previewId : null}
+            activeNodeId={previewId}
             hideUnconnectedNodes={hideUnconnectedDots}
             onNodeHover={setHoveredId}
             onNodeSelect={setPinnedId}
