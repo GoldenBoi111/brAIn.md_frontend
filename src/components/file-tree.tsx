@@ -100,10 +100,8 @@ function FileTreeNode({
         onClick={handleClick}
         onContextMenu={(event) => onNodeContextMenu(event, node)}
         className={cn(
-          "flex w-full items-center gap-1 rounded-sm px-2 py-1 text-left text-[13px] leading-tight transition-colors",
-          "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-          isSelected &&
-            "bg-sidebar-accent text-sidebar-accent-foreground font-medium",
+          "vault-tree__item flex w-full items-center gap-1 px-2 py-1 text-left text-[13px] leading-tight transition-colors",
+          isSelected && "vault-tree__item--selected font-medium",
         )}
         style={{ paddingLeft: `${depth * 12 + 8}px` }}
       >
@@ -241,7 +239,7 @@ export function FileTree({
   return (
     <>
       <nav
-        className="scrollbar-thin flex-1 overflow-y-auto py-1"
+        className="vault-tree scrollbar-thin flex-1 overflow-y-auto py-1"
         aria-label="File explorer"
         onContextMenu={handleBackgroundContextMenu}
       >

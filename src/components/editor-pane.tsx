@@ -14,8 +14,8 @@ export function EditorPane({
   onChange,
 }: EditorPaneProps) {
   return (
-    <div className="flex h-full flex-col">
-      <header className="flex h-9 shrink-0 items-center gap-2 border-b border-border/60 px-3">
+    <div className="vault-pane vault-pane--editor flex h-full flex-col">
+      <header className="vault-pane__header flex h-9 shrink-0 items-center gap-2 border-b border-border/60 px-3">
         <span className="text-xs font-medium text-muted-foreground">Editor</span>
         {fileName && (
           <>
@@ -33,8 +33,7 @@ export function EditorPane({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         spellCheck={false}
-        className="scrollbar-thin flex-1 resize-none bg-transparent p-4 font-mono text-[13px] leading-relaxed text-foreground outline-none placeholder:text-muted-foreground"
-        style={{ fontFamily: "var(--font-mono)" }}
+        className="vault-pane__body scrollbar-thin flex-1 resize-none bg-transparent p-4 text-[15px] leading-relaxed text-foreground outline-none placeholder:text-muted-foreground"
         placeholder="Select a file from the explorer..."
       />
     </div>

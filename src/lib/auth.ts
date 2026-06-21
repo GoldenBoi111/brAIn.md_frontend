@@ -1,7 +1,7 @@
-/** Session cookie set by the backend on login/register. */
+/** Session cookie used by the app shell to recognize an authenticated user. */
 export const SESSION_COOKIE_NAME = "brain_session";
 
-/** Legacy stub cookie — still cleared on sign-out during transition. */
+/** Legacy stub cookie - still cleared on sign-out during transition. */
 export const AUTH_COOKIE_NAME = "brain-md-auth";
 
 const AUTH_STORAGE_KEY = "brain-md-auth";
@@ -20,6 +20,11 @@ export function setAuthenticated(email: string): void {
   };
 
   window.sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
+
+  const cookieValue = encodeURIComponent(email);
+  const cookieOptions = "path=/; SameSite=Lax";
+  document.cookie = `${SESSION_COOKIE_NAME}=${cookieValue}; ${cookieOptions}`;
+  document.cookie = `${AUTH_COOKIE_NAME}=${cookieValue}; ${cookieOptions}`;
 }
 
 export function getAuthenticatedSession(): AuthSession | null {

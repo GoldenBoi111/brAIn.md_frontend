@@ -10,6 +10,7 @@ import { CreateFolderDialog } from "@/components/create-folder-dialog";
 import { RenameFileDialog } from "@/components/rename-file-dialog";
 import { RenameFolderDialog } from "@/components/rename-folder-dialog";
 import { ResizableWorkspace } from "@/components/resizable-workspace";
+import { ThemeToggleButton } from "@/components/theme-toggle-button";
 import {
   usePreviewControls,
   useSidebarControls,
@@ -300,8 +301,10 @@ export function AppShell({ folderId }: AppShellProps) {
 
   if (!initialVaultState.valid) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-3 bg-background px-6 text-center">
-        <p className="text-sm text-muted-foreground">This vault could not be found.</p>
+      <div className="vault-shell vault-shell--empty">
+        <div className="vault-shell__empty-card">
+          <p className="text-sm text-muted-foreground">This vault could not be found.</p>
+        </div>
         <Link
           href="/dashboard"
           className="text-sm font-medium text-foreground underline-offset-4 hover:underline"
@@ -313,12 +316,12 @@ export function AppShell({ folderId }: AppShellProps) {
   }
 
   return (
-    <div className="flex h-full flex-col bg-background">
-      <header className="flex h-10 shrink-0 items-center justify-between border-b border-border/60 bg-sidebar px-3">
-        <div className="flex items-center gap-1">
+    <div className="vault-shell">
+      <header className="vault-shell__topbar">
+        <div className="vault-shell__topbar-group">
           <Link
             href="/dashboard"
-            className="inline-flex size-7 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground"
+            className="vault-shell__icon-button"
             aria-label="Back to hub"
             title="Back to hub"
           >
@@ -327,26 +330,27 @@ export function AppShell({ folderId }: AppShellProps) {
           <button
             type="button"
             onClick={toggleSidebar}
-            className="inline-flex size-7 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground"
+            className="vault-shell__icon-button"
             aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             <PanelLeft className="size-4" />
           </button>
-          <span className="ml-1 text-sm font-semibold tracking-tight">
+          <span className="vault-shell__title">
             {vaultName}
           </span>
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="vault-shell__topbar-group vault-shell__topbar-group--actions">
+          <ThemeToggleButton />
           <button
             type="button"
             onClick={handleToggleAiNoWrite}
             disabled={!canToggleLlmAccess}
             className={cn(
-              "inline-flex size-7 items-center justify-center rounded-sm transition-colors",
+              "vault-shell__icon-button",
               aiNoWriteActive
-                ? "bg-sidebar-accent text-foreground"
-                : "text-muted-foreground hover:bg-sidebar-accent hover:text-foreground",
+                ? "vault-shell__icon-button--active"
+                : "",
               !canToggleLlmAccess && "pointer-events-none opacity-40",
             )}
             aria-label="Toggle AI read-only"
@@ -360,10 +364,10 @@ export function AppShell({ folderId }: AppShellProps) {
             onClick={handleToggleAiHidden}
             disabled={!canToggleLlmAccess}
             className={cn(
-              "inline-flex size-7 items-center justify-center rounded-sm transition-colors",
+              "vault-shell__icon-button",
               aiHiddenActive
-                ? "bg-sidebar-accent text-foreground"
-                : "text-muted-foreground hover:bg-sidebar-accent hover:text-foreground",
+                ? "vault-shell__icon-button--active"
+                : "",
               !canToggleLlmAccess && "pointer-events-none opacity-40",
             )}
             aria-label="Toggle hidden from AI"
@@ -375,7 +379,7 @@ export function AppShell({ folderId }: AppShellProps) {
           <button
             type="button"
             onClick={() => setCommandOpen(true)}
-            className="inline-flex h-7 items-center gap-2 rounded-md border border-border/60 bg-background/50 px-2.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            className="vault-shell__search-button"
           >
             <Search className="size-3.5" />
             <span>Search</span>
@@ -386,7 +390,7 @@ export function AppShell({ folderId }: AppShellProps) {
           <button
             type="button"
             onClick={togglePreview}
-            className="inline-flex size-7 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground"
+            className="vault-shell__icon-button"
             aria-label={previewCollapsed ? "Show preview" : "Hide preview"}
           >
             <PanelRight className="size-4" />
@@ -394,7 +398,7 @@ export function AppShell({ folderId }: AppShellProps) {
         </div>
       </header>
 
-      <div className="min-h-0 flex-1">
+      <div className="vault-shell__workspace">
         <ResizableWorkspace
           fileTree={fileTree}
           fileName={fileName}
@@ -419,6 +423,7 @@ export function AppShell({ folderId }: AppShellProps) {
           previewCollapsed={previewCollapsed}
           onPreviewCollapsedChange={setPreviewCollapsed}
           previewRef={previewRef}
+          vaultName={vaultName}
         />
       </div>
 

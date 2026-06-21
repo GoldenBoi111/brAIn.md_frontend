@@ -2,57 +2,74 @@ import type { FileNode } from "@/types/file-tree";
 
 export const MOCK_FILE_TREE: FileNode[] = [
   {
-    id: "folder-personal",
-    name: "Personal",
+    id: "folder-brain-vault",
+    name: "Brain Vault",
     type: "folder",
+    createdAt: "2026-05-28",
     children: [
       {
-        id: "file-journal",
-        name: "Journal.md",
-        type: "file",
-      },
-      {
-        id: "file-goals",
-        name: "Goals.md",
-        type: "file",
-        llmAccess: "no_write",
-      },
-    ],
-  },
-  {
-    id: "folder-projects",
-    name: "Projects",
-    type: "folder",
-    children: [
-      {
-        id: "folder-brain-md",
-        name: "brAIn.md",
+        id: "folder-personal",
+        name: "Personal",
         type: "folder",
+        createdAt: "2026-05-30",
         children: [
           {
-            id: "file-architecture",
-            name: "Architecture.md",
+            id: "file-journal",
+            name: "Journal.md",
             type: "file",
+            createdAt: "2026-06-20",
           },
           {
-            id: "file-roadmap",
-            name: "Roadmap.md",
+            id: "file-goals",
+            name: "Goals.md",
             type: "file",
+            createdAt: "2026-06-14",
+            llmAccess: "no_write",
           },
         ],
       },
+      {
+        id: "folder-projects",
+        name: "Projects",
+        type: "folder",
+        createdAt: "2026-06-01",
+        children: [
+          {
+            id: "folder-brain-md",
+            name: "brAIn.md",
+            type: "folder",
+            createdAt: "2026-06-01",
+            children: [
+              {
+                id: "file-architecture",
+                name: "Architecture.md",
+                type: "file",
+                createdAt: "2026-06-11",
+              },
+              {
+                id: "file-roadmap",
+                name: "Roadmap.md",
+                type: "file",
+                createdAt: "2026-06-18",
+              },
+            ],
+          },
+        ],
+      },
+      {
+        id: "file-ideas",
+        name: "Ideas.md",
+        type: "file",
+        createdAt: "2026-06-21",
+      },
+      {
+        id: "file-inbox",
+        name: "Inbox.md",
+        type: "file",
+        createdAt: "2026-06-19",
+        llmAccess: "hidden",
+      },
     ],
-  },
-  {
-    id: "file-ideas",
-    name: "Ideas.md",
-    type: "file",
-  },
-  {
-    id: "file-inbox",
-    name: "Inbox.md",
-    type: "file",
-    llmAccess: "hidden",
   },
 ];
 
@@ -143,15 +160,9 @@ export interface MockVault {
 
 export const MOCK_VAULTS: MockVault[] = [
   {
-    id: "folder-personal",
-    name: "Personal",
-    description: "Journal, goals, and private reflections.",
-    fileCount: 2,
-  },
-  {
-    id: "folder-projects",
-    name: "Projects",
-    description: "Architecture notes, roadmaps, and active work.",
-    fileCount: 2,
+    id: "folder-brain-vault",
+    name: "Brain Vault",
+    description: "One place for every memory, folder, and project.",
+    fileCount: 6,
   },
 ];

@@ -3,15 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Brain, Loader2, Lock, Sparkles } from "lucide-react";
+import { ArrowRight, Brain, Loader2, Lock, Sparkles } from "lucide-react";
 
-import FadeContent from "@/components/FadeContent";
-import GlareHover from "@/components/GlareHover";
-import GradientText from "@/components/GradientText";
 import { setAuthenticated } from "@/lib/auth";
-import { BackendApiError, backendApi } from "@/lib/backend-api";
-
-const BRAND_GRADIENT = ["#a78bfa", "#fafafa", "#818cf8"];
 
 export function LoginForm() {
   const searchParams = useSearchParams();
@@ -35,12 +29,7 @@ export function LoginForm() {
     setIsLoading(true);
 
     try {
-      const { user } = await backendApi.login({
-        email: email.trim(),
-        password,
-      });
-
-      setAuthenticated(user.email);
+      setAuthenticated(email.trim());
 
       const nextPath = searchParams.get("next");
       const destination =
@@ -49,48 +38,30 @@ export function LoginForm() {
           : "/dashboard";
 
       window.location.assign(destination);
-    } catch (err) {
+    } catch {
       setIsLoading(false);
-      if (err instanceof BackendApiError) {
-        setError(err.message);
-        return;
-      }
       setError("Something went wrong. Please try again.");
     }
   };
 
   return (
-    <>
-      <FadeContent blur duration={900} delay={0} threshold={0.05}>
-        <div className="login-page__brand">
-          <div className="login-page__logo">
-            <Brain className="size-7 text-foreground" />
-          </div>
-          <GradientText
-            colors={BRAND_GRADIENT}
-            animationSpeed={6}
-            className="login-page__title mx-auto inline-flex"
-          >
-            brAIn.md
-          </GradientText>
-          <p className="login-page__subtitle">
-            Sign in to open your markdown vault
-          </p>
+    <section className="login-page__stack">
+      <div className="login-page__brand">
+        <div className="login-page__logo">
+          <Brain className="size-6 text-foreground" />
         </div>
-      </FadeContent>
+        <p className="login-page__eyebrow">Personal memory graph</p>
+        <h1 className="login-page__title">Open the notebook brain</h1>
+        <p className="login-page__subtitle">
+          Sign in to the local vault, browse the graph, and keep every memory anchored in one place.
+        </p>
+      </div>
 
-      <FadeContent blur duration={900} delay={120} threshold={0.05}>
-      <GlareHover
-        width="100%"
-        height="auto"
-        background="var(--card)"
-        borderColor="var(--border)"
-        borderRadius="1rem"
-        glareColor="#a78bfa"
-        glareOpacity={0.28}
-        className="login-card !block w-full !cursor-default !place-items-stretch"
-        style={{ width: "100%", display: "block" }}
-      >
+      <section className="login-card" aria-labelledby="login-card-title">
+        <h2 id="login-card-title" className="sr-only">
+          Sign in form
+        </h2>
+
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="login-card__field">
             <label htmlFor="email" className="login-card__label">
@@ -109,17 +80,9 @@ export function LoginForm() {
           </div>
 
           <div className="login-card__field">
-            <div className="flex items-center justify-between gap-3">
-              <label htmlFor="password" className="login-card__label">
-                Password
-              </label>
-              <button
-                type="button"
-                className="text-xs text-muted-foreground transition-colors hover:text-foreground"
-              >
-                Forgot password?
-              </button>
-            </div>
+            <label htmlFor="password" className="login-card__label">
+              Password
+            </label>
             <input
               id="password"
               type="password"
@@ -132,11 +95,11 @@ export function LoginForm() {
             />
           </div>
 
-          <label className="flex cursor-pointer items-center gap-2.5 text-sm text-muted-foreground">
+          <label className="login-card__checkbox">
             <input
               type="checkbox"
               defaultChecked
-              className="size-4 rounded border border-input accent-primary"
+              className="size-4 accent-primary"
             />
             Remember this device
           </label>
@@ -158,30 +121,29 @@ export function LoginForm() {
                 Opening your vault...
               </>
             ) : (
-              "Sign in to vault"
+              <>
+                Sign in to vault
+                <ArrowRight className="size-4" />
+              </>
             )}
           </button>
         </form>
 
-        <div className="mt-6 space-y-3 border-t border-border/60 pt-5">
+        <div className="login-card__notes">
           <div className="login-card__hint">
             <Lock className="size-4" />
-            <span>Secure sign-in to access your vault and notes.</span>
+            <span>No backend is required for this build.</span>
           </div>
           <div className="login-card__hint">
             <Sparkles className="size-4" />
-            <span>Jump straight into your files, folders, and notes after sign-in.</span>
+            <span>Your session is stored locally so you can open the app offline.</span>
           </div>
         </div>
-      </GlareHover>
-      </FadeContent>
+      </section>
 
-      <FadeContent blur duration={800} delay={220} threshold={0.05}>
-        <p className="login-page__footer">
-          Don&apos;t have an account?{" "}
-          <Link href="/signup">Create one</Link>
-        </p>
-      </FadeContent>
-    </>
+      <p className="login-page__footer">
+        Don&apos;t have an account? <Link href="/signup">Create one</Link>
+      </p>
+    </section>
   );
 }
