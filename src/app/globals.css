@@ -2390,7 +2390,10 @@ select {
 }
 
 .dark .paper-button--outline {
-  background: var(--secondary);
+  background: color-mix(in srgb, var(--background) 88%, var(--card));
+  border-color: var(--border);
+  color: var(--foreground);
+  box-shadow: 4px 4px 0 var(--border);
 }
 
 .paper-button--ghost {

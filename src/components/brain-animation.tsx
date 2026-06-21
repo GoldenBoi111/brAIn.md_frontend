@@ -182,7 +182,7 @@ export const BrainAnimation = memo(function BrainAnimation({
   const colors = useMemo(() => {
     const palette = isDarkTheme
       ? ["#44af69", "#f8333c", "#fcab10", "#2b9eb3", "#dbd5b5"]
-      : ["#44af69", "#f8333c", "#fcab10", "#2b9eb3", "#dbd5b5"];
+      : ["#220901", "#621708", "#941b0c", "#bc3908", "#f6aa1c"];
 
     return palette.map((value) => new Color(value));
   }, [isDarkTheme]);
