@@ -18,9 +18,9 @@ export interface BackendSection {
 }
 
 export const BACKEND_NOTES = [
-  "The browser only talks to the local bridge route, so there is no cross-origin host to trigger CORS errors.",
-  "When a real backend is connected later, set BACKEND_API_BASE_URL on the server and keep the UI paths unchanged.",
-  "Until then, the bridge returns mock payloads so the screens stay usable offline.",
+  "The browser still talks to a secure same-origin bridge route, so there is no cross-origin host to trigger CORS errors.",
+  "In production, set BACKEND_API_BASE_URL to the live website API and keep the UI paths unchanged.",
+  "Development can still fall back to mock payloads if the backend is unavailable.",
 ];
 
 export const BACKEND_SECTIONS: BackendSection[] = [
@@ -58,7 +58,7 @@ export const BACKEND_SECTIONS: BackendSection[] = [
   {
     id: "auth",
     title: "Auth",
-    summary: "Session lifecycle for local or future backend sign-in.",
+    summary: "Session lifecycle for secure backend sign-in.",
     endpoints: [
       {
         method: "POST",
@@ -295,7 +295,7 @@ export const BACKEND_SECTIONS: BackendSection[] = [
         path: "/api/users",
         title: "List users",
         auth: "Admin session",
-        purpose: "List local users.",
+        purpose: "List admin users.",
         response: "{ api_version, users[] }",
       },
       {
@@ -303,7 +303,7 @@ export const BACKEND_SECTIONS: BackendSection[] = [
         path: "/api/users",
         title: "Create user",
         auth: "Admin session",
-        purpose: "Create a local auth user.",
+        purpose: "Create an auth user.",
         payload: "{ email, password, name?, role? }",
         response: "{ api_version, user }",
       },

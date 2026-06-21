@@ -15,8 +15,8 @@ export function BackendBridge() {
         <div className="backend-page__brand">
           <Brain className="size-4" />
           <div>
-            <p className="backend-page__eyebrow">Visual backend bridge</p>
-            <h1 className="backend-page__title">Backend API surfaces</h1>
+            <p className="backend-page__eyebrow">Website API bridge</p>
+            <h1 className="backend-page__title">Live backend surfaces</h1>
           </div>
         </div>
 
@@ -42,26 +42,26 @@ export function BackendBridge() {
 
       <section className="backend-page__hero">
         <div className="backend-page__hero-copy">
-          <p className="backend-page__eyebrow">No live host attached yet</p>
-          <h2 className="backend-page__hero-title">The UI is wired for a backend later, but stays local now.</h2>
+          <p className="backend-page__eyebrow">Production bridge</p>
+          <h2 className="backend-page__hero-title">The UI talks to the website API through secure same-origin routes.</h2>
           <p className="backend-page__hero-lede">
-            The browser talks to a same-origin bridge, so we avoid cross-origin issues now and can
-            swap in a real backend connection later without changing the UI paths.
+            In production the bridge proxies to the live backend at mcp.brain-dev.dev without changing
+            the UI paths.
           </p>
         </div>
 
         <div className="backend-page__hero-panel">
           <div className="backend-page__hero-stat">
             <span>Bridge mode</span>
-            <strong>Mock first</strong>
+            <strong>Live first</strong>
           </div>
           <div className="backend-page__hero-stat">
             <span>Backend URL</span>
-            <strong>Not set</strong>
+            <strong>mcp.brain-dev.dev</strong>
           </div>
           <div className="backend-page__hero-stat">
             <span>Transport</span>
-            <strong>Same origin</strong>
+            <strong>Proxy route</strong>
           </div>
         </div>
       </section>
@@ -129,8 +129,8 @@ export function BackendBridge() {
       <footer className="backend-page__footer">
         <PlugZap className="size-4" />
         <span>
-          Keep the route names stable now. When the backend is live, set the bridge URL on the server
-          and the existing UI can start talking to it.
+          Keep the route names stable. The bridge now points at the live website API in production
+          through a secure same-origin route.
         </span>
         <ArrowUpRight className="size-4" />
       </footer>
