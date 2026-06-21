@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import {
   Bot,
+  EyeOff,
   FilePlus,
   FileText,
   Folder,
@@ -22,26 +23,52 @@ import {
   CommandSeparator,
   CommandShortcut,
 } from "@/components/ui/command";
-import { collectFiles, collectFolders, getFilePath } from "@/lib/vault";
+import {
+  canLlmRead,
+  canLlmWrite,
+  collectLlmReadableFiles,
+  getLlmAccess,
+} from "@/lib/llm-access";
+import { collectFiles, collectFolders, findFileNode, getFilePath } from "@/lib/vault";
 import type { FileNode } from "@/types/file-tree";
 
 interface CommandPaletteProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   fileTree: FileNode[];
+  selectedFileId: string | null;
   onSelectFile: (id: string) => void;
   onCreateFile: (parentFolderId: string | null) => void;
+}
+
+function FilePolicyIcon({ file }: { file: FileNode }) {
+  const access = getLlmAccess(file);
+  if (access === "hidden") return <EyeOff />;
+  if (access === "no_write") return <Lock />;
+  return <FileText />;
 }
 
 export function CommandPalette({
   open,
   onOpenChange,
   fileTree,
+  selectedFileId,
   onSelectFile,
   onCreateFile,
 }: CommandPaletteProps) {
-  const vaultFiles = collectFiles(fileTree);
   const vaultFolders = collectFolders(fileTree);
+  const llmReadableCount = collectLlmReadableFiles(fileTree).length;
+
+  const selectedFile = useMemo(
+    () => (selectedFileId ? findFileNode(fileTree, selectedFileId) : null),
+    [fileTree, selectedFileId],
+  );
+
+  const canSummarize =
+    selectedFile?.type === "file" && canLlmRead(selectedFile);
+  const canImproveWriting =
+    selectedFile?.type === "file" && canLlmWrite(selectedFile);
+  const canAskAboutVault = llmReadableCount > 0;
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -82,7 +109,7 @@ export function CommandPalette({
             <span>Search in vault...</span>
             <CommandShortcut>⌘P</CommandShortcut>
           </CommandItem>
-          {vaultFiles.map((file) => {
+          {collectFiles(fileTree).map((file) => {
             const path = getFilePath(fileTree, file.id);
             return (
               <CommandItem
@@ -90,7 +117,7 @@ export function CommandPalette({
                 value={path ?? file.name}
                 onSelect={() => handleFileSelect(file.id)}
               >
-                {file.restricted ? <Lock /> : <FileText />}
+                <FilePolicyIcon file={file} />
                 <span>{path ?? file.name}</span>
               </CommandItem>
             );
@@ -123,15 +150,15 @@ export function CommandPalette({
         <CommandSeparator />
 
         <CommandGroup heading="AI Actions">
-          <CommandItem>
+          <CommandItem disabled={!canSummarize}>
             <Sparkles />
             <span>Summarize current note</span>
           </CommandItem>
-          <CommandItem>
+          <CommandItem disabled={!canImproveWriting}>
             <Wand2 />
             <span>Improve writing</span>
           </CommandItem>
-          <CommandItem>
+          <CommandItem disabled={!canAskAboutVault}>
             <Bot />
             <span>Ask about vault</span>
           </CommandItem>

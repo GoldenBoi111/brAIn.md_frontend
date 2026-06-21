@@ -1,5 +1,5 @@
-import { VaultRoot } from "@/components/vault-root";
+import { redirect } from "next/navigation";
 
 export default function Home() {
-  return <VaultRoot />;
+  redirect("/login");
 }

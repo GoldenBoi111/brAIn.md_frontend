@@ -1,10 +1,13 @@
 export type FileNodeType = "file" | "folder";
 
+export type LlmAccess = "default" | "no_write" | "hidden";
+
 export interface FileNode {
   id: string;
   name: string;
   type: FileNodeType;
-  restricted?: boolean;
+  /** AI access policy — files only; omit = "default" */
+  llmAccess?: LlmAccess;
   children?: FileNode[];
 }
 

@@ -15,7 +15,7 @@ export const MOCK_FILE_TREE: FileNode[] = [
         id: "file-goals",
         name: "Goals.md",
         type: "file",
-        restricted: true,
+        llmAccess: "no_write",
       },
     ],
   },
@@ -52,7 +52,7 @@ export const MOCK_FILE_TREE: FileNode[] = [
     id: "file-inbox",
     name: "Inbox.md",
     type: "file",
-    restricted: true,
+    llmAccess: "hidden",
   },
 ];
 
@@ -81,7 +81,7 @@ Started building the brAIn.md frontend today. The Obsidian-style layout feels ri
 `,
   "file-goals": `# Goals
 
-> This note is restricted.
+> AI can read this note but cannot edit it.
 
 ## Q2 2026
 - [ ] Ship MVP vault sync
@@ -125,7 +125,7 @@ brAIn.md separates the UI shell from a local backend that owns the filesystem, c
 `,
   "file-inbox": `# Inbox
 
-> Restricted capture zone for unsorted thoughts.
+> Hidden from AI — your unsorted thoughts stay private from the assistant.
 
 - Research local-first sync patterns
 - Look into CRDTs for conflict resolution
@@ -133,3 +133,25 @@ brAIn.md separates the UI shell from a local backend that owns the filesystem, c
 };
 
 export const DEFAULT_FILE_ID = "file-ideas";
+
+export interface MockVault {
+  id: string;
+  name: string;
+  description: string;
+  fileCount: number;
+}
+
+export const MOCK_VAULTS: MockVault[] = [
+  {
+    id: "folder-personal",
+    name: "Personal",
+    description: "Journal, goals, and private reflections.",
+    fileCount: 2,
+  },
+  {
+    id: "folder-projects",
+    name: "Projects",
+    description: "Architecture notes, roadmaps, and active work.",
+    fileCount: 2,
+  },
+];

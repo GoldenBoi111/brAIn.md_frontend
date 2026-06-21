@@ -12,6 +12,10 @@ const AppShell = dynamic(
   },
 );
 
-export function VaultRoot() {
-  return <AppShell />;
+interface VaultRootProps {
+  folderId: string;
+}
+
+export function VaultRoot({ folderId }: VaultRootProps) {
+  return <AppShell folderId={folderId} />;
 }

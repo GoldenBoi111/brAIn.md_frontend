@@ -372,3 +372,277 @@
 .login-page__footer a:hover {
   opacity: 0.85;
 }
+
+/* ── Dashboard hub ─────────────────────────────────────────────── */
+
+.hub-page {
+  min-height: 100%;
+  background: #111113;
+  color: #fafafa;
+}
+
+.hub-page__inner {
+  margin: 0 auto;
+  max-width: 36rem;
+  padding: 3rem 1.5rem 4rem;
+}
+
+.hub-page__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 3.5rem;
+}
+
+.hub-page__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.hub-page__brand-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.hub-page__sign-out {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  color: #a1a1aa;
+  transition: color 0.15s;
+}
+
+.hub-page__sign-out:hover {
+  color: #fafafa;
+}
+
+.hub-page__intro {
+  margin-bottom: 2.5rem;
+}
+
+.hub-page__eyebrow {
+  margin-bottom: 0.75rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #71717a;
+}
+
+.hub-page__title {
+  margin-bottom: 0.75rem;
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+}
+
+.hub-page__lede {
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: #a1a1aa;
+}
+
+.hub-page__section {
+  margin-bottom: 2rem;
+}
+
+.hub-page__section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.hub-page__section-label {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #71717a;
+}
+
+.hub-page__section-meta {
+  font-size: 0.6875rem;
+  color: #52525b;
+}
+
+.hub-page__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.hub-page__link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.875rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  transition: opacity 0.15s;
+}
+
+.hub-page__link:hover {
+  opacity: 0.85;
+}
+
+.hub-page__link-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.hub-page__link-title {
+  display: block;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.hub-page__link-desc {
+  display: block;
+  margin-top: 0.125rem;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: #71717a;
+}
+
+.hub-page__link-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  color: #52525b;
+}
+
+.hub-page__secondary {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  width: 100%;
+  margin-top: 0.75rem;
+  padding: 0.75rem 0.875rem;
+  border: 1px dashed rgba(255, 255, 255, 0.14);
+  border-radius: 0.5rem;
+  background: transparent;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #a1a1aa;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.hub-page__secondary:hover {
+  color: #fafafa;
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.hub-page__cta {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  width: 100%;
+  padding: 0.875rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0.5rem;
+  background: #1c1c1f;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: #fafafa;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.hub-page__cta:hover {
+  background: #27272a;
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.hub-page__footer {
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 0.75rem;
+  color: #52525b;
+  text-align: center;
+}
+
+/* ── Mind graph ────────────────────────────────────────────────── */
+
+.mind-graph {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #111113;
+}
+
+.mind-graph__header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.625rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: #111113;
+}
+
+.mind-graph__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8125rem;
+  color: #a1a1aa;
+  transition: color 0.15s;
+}
+
+.mind-graph__back:hover {
+  color: #fafafa;
+}
+
+.mind-graph__title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.mind-graph__title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.mind-graph__subtitle {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: #52525b;
+}
+
+.mind-graph__canvas {
+  flex: 1;
+  min-height: 0;
+}
+
+.mind-graph__controls {
+  background: #1c1c1f !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 0.375rem !important;
+}
+
+.mind-graph__controls button {
+  background: transparent !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  fill: #a1a1aa !important;
+}
+
+.mind-graph__minimap {
+  background: #1c1c1f !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 0.375rem !important;
+}

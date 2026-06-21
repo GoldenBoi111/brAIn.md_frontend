@@ -1,4 +1,4 @@
-import type { FileNode } from "@/types/file-tree";
+import type { FileNode, LlmAccess } from "@/types/file-tree";
 
 export function findFileNode(
   nodes: FileNode[],
@@ -220,8 +220,33 @@ export function removeFileFromTree(
 
 export function getFirstSelectableFileId(nodes: FileNode[]): string | null {
   const files = collectFiles(nodes);
-  const editableFile = files.find((file) => !file.restricted);
-  return editableFile?.id ?? files[0]?.id ?? null;
+  return files[0]?.id ?? null;
+}
+
+export function setFileLlmAccessInTree(
+  nodes: FileNode[],
+  fileId: string,
+  access: LlmAccess,
+): FileNode[] {
+  return nodes.map((node) => {
+    if (node.id === fileId && node.type === "file") {
+      if (access === "default") {
+        const next = { ...node };
+        delete next.llmAccess;
+        return next;
+      }
+      return { ...node, llmAccess: access };
+    }
+
+    if (node.children) {
+      return {
+        ...node,
+        children: setFileLlmAccessInTree(node.children, fileId, access),
+      };
+    }
+
+    return node;
+  });
 }
 
 export function generateRenamedFileName(
@@ -384,18 +409,6 @@ export function collectFileIdsInSubtree(node: FileNode): string[] {
 
   walk(node);
   return ids;
-}
-
-export function folderContainsRestricted(node: FileNode): boolean {
-  if (node.type !== "folder") return false;
-
-  function walk(current: FileNode): boolean {
-    if (current.restricted) return true;
-    if (!current.children) return false;
-    return current.children.some(walk);
-  }
-
-  return walk(node);
 }
 
 export function removeFolderFromTree(

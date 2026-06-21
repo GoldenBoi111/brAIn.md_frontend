@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
-import { PanelLeft, PanelRight, Search } from "lucide-react";
+import { ArrowLeft, EyeOff, Lock, PanelLeft, PanelRight, Search } from "lucide-react";
 
 import { CommandPalette } from "@/components/command-palette";
 import { CreateFileDialog } from "@/components/create-file-dialog";
@@ -16,25 +17,53 @@ import {
 import {
   DEFAULT_FILE_ID,
   MOCK_FILE_CONTENTS,
-  MOCK_FILE_TREE,
 } from "@/lib/mock-data";
+import { getLlmAccess, getLlmAccessLabel, isLlmHidden, isLlmNoWrite, toggleLlmHidden, toggleLlmNoWrite } from "@/lib/llm-access";
+import { getFileTree } from "@/lib/vault-catalog";
+import { cn } from "@/lib/utils";
 import {
   collectFileIdsInSubtree,
   createFileInTree,
   createFolderInTree,
   findFileNode,
-  folderContainsRestricted,
   getFirstSelectableFileId,
   removeFileFromTree,
   removeFolderFromTree,
   renameFileInTree,
   renameFolderInTree,
   resolveCreateParentId,
+  setFileLlmAccessInTree,
 } from "@/lib/vault";
+import type { LlmAccess } from "@/types/file-tree";
 
 const NEW_FILE_TEMPLATE = "# New note\n\nStart writing...";
 
-export function AppShell() {
+function getVaultInitialState(folderId: string) {
+  const fileTree = getFileTree();
+  const vaultFolder = findFileNode(fileTree, folderId);
+
+  if (!vaultFolder || vaultFolder.type !== "folder") {
+    return {
+      tree: fileTree,
+      selectedId: DEFAULT_FILE_ID,
+      valid: false,
+    };
+  }
+
+  const tree = [vaultFolder];
+
+  return {
+    tree,
+    selectedId: getFirstSelectableFileId(tree),
+    valid: true,
+  };
+}
+
+interface AppShellProps {
+  folderId: string;
+}
+
+export function AppShell({ folderId }: AppShellProps) {
   const { sidebarRef, sidebarCollapsed, setSidebarCollapsed, toggleSidebar } =
     useSidebarControls();
   const { previewRef, previewCollapsed, setPreviewCollapsed, togglePreview } =
@@ -52,10 +81,14 @@ export function AppShell() {
   const [createFolderParentId, setCreateFolderParentId] = useState<string | null>(
     null,
   );
-  const [expandFolderId, setExpandFolderId] = useState<string | null>(null);
-  const [fileTree, setFileTree] = useState(() => MOCK_FILE_TREE);
+  const [expandFolderId, setExpandFolderId] = useState<string | null>(folderId);
+  const initialVaultState = useMemo(
+    () => getVaultInitialState(folderId),
+    [folderId],
+  );
+  const [fileTree, setFileTree] = useState(() => initialVaultState.tree);
   const [selectedFileId, setSelectedFileId] = useState<string | null>(
-    DEFAULT_FILE_ID,
+    () => initialVaultState.selectedId,
   );
   const [fileContents, setFileContents] = useState<Record<string, string>>(
     () => ({ ...MOCK_FILE_CONTENTS }),
@@ -68,7 +101,18 @@ export function AppShell() {
 
   const markdown = selectedFileId ? (fileContents[selectedFileId] ?? "") : "";
   const fileName = selectedFile?.type === "file" ? selectedFile.name : null;
-  const readOnly = selectedFile?.restricted ?? false;
+  const llmAccessLabel = useMemo(() => {
+    if (selectedFile?.type !== "file") return null;
+    const access = getLlmAccess(selectedFile);
+    if (access === "default") return null;
+    return getLlmAccessLabel(access);
+  }, [selectedFile]);
+
+  const selectedLlmAccess =
+    selectedFile?.type === "file" ? getLlmAccess(selectedFile) : null;
+  const aiNoWriteActive = selectedLlmAccess ? isLlmNoWrite(selectedLlmAccess) : false;
+  const aiHiddenActive = selectedLlmAccess ? isLlmHidden(selectedLlmAccess) : false;
+  const canToggleLlmAccess = selectedFile?.type === "file";
 
   const handleSelectFile = useCallback(
     (id: string) => {
@@ -81,10 +125,10 @@ export function AppShell() {
 
   const handleMarkdownChange = useCallback(
     (value: string) => {
-      if (!selectedFileId || readOnly) return;
+      if (!selectedFileId) return;
       setFileContents((prev) => ({ ...prev, [selectedFileId]: value }));
     },
-    [selectedFileId, readOnly],
+    [selectedFileId],
   );
 
   const openCreateDialog = useCallback((parentFolderId: string | null) => {
@@ -141,7 +185,7 @@ export function AppShell() {
   const handleDeleteFile = useCallback(
     (fileId: string) => {
       const file = findFileNode(fileTree, fileId);
-      if (!file || file.type !== "file" || file.restricted) return;
+      if (!file || file.type !== "file") return;
 
       const nextTree = removeFileFromTree(fileTree, fileId);
 
@@ -169,7 +213,7 @@ export function AppShell() {
       if (!renameFileId) return;
 
       const file = findFileNode(fileTree, renameFileId);
-      if (!file || file.type !== "file" || file.restricted) return;
+      if (!file || file.type !== "file") return;
 
       setFileTree(renameFileInTree(fileTree, renameFileId, rawName));
     },
@@ -186,7 +230,7 @@ export function AppShell() {
       if (!renameFolderId) return;
 
       const folder = findFileNode(fileTree, renameFolderId);
-      if (!folder || folder.type !== "folder" || folder.restricted) return;
+      if (!folder || folder.type !== "folder") return;
 
       setFileTree(renameFolderInTree(fileTree, renameFolderId, rawName));
     },
@@ -196,12 +240,7 @@ export function AppShell() {
   const handleDeleteFolder = useCallback(
     (folderId: string) => {
       const folder = findFileNode(fileTree, folderId);
-      if (
-        !folder ||
-        folder.type !== "folder" ||
-        folder.restricted ||
-        folderContainsRestricted(folder)
-      ) {
+      if (!folder || folder.type !== "folder") {
         return;
       }
 
@@ -224,16 +263,67 @@ export function AppShell() {
     [fileTree, selectedFileId],
   );
 
+  const handleSetLlmAccess = useCallback(
+    (fileId: string, access: LlmAccess) => {
+      const file = findFileNode(fileTree, fileId);
+      if (!file || file.type !== "file") return;
+
+      setFileTree(setFileLlmAccessInTree(fileTree, fileId, access));
+    },
+    [fileTree],
+  );
+
+  const handleToggleAiNoWrite = useCallback(() => {
+    if (!selectedFileId || selectedFile?.type !== "file" || !selectedLlmAccess) {
+      return;
+    }
+    handleSetLlmAccess(selectedFileId, toggleLlmNoWrite(selectedLlmAccess));
+  }, [handleSetLlmAccess, selectedFile, selectedFileId, selectedLlmAccess]);
+
+  const handleToggleAiHidden = useCallback(() => {
+    if (!selectedFileId || selectedFile?.type !== "file" || !selectedLlmAccess) {
+      return;
+    }
+    handleSetLlmAccess(selectedFileId, toggleLlmHidden(selectedLlmAccess));
+  }, [handleSetLlmAccess, selectedFile, selectedFileId, selectedLlmAccess]);
+
   const renameFolderName =
     renameFolderId ? (findFileNode(fileTree, renameFolderId)?.name ?? "") : "";
 
   const renameFileName =
     renameFileId ? (findFileNode(fileTree, renameFileId)?.name ?? "") : "";
 
+  const vaultName = useMemo(() => {
+    const folder = findFileNode(getFileTree(), folderId);
+    return folder?.name ?? "Vault";
+  }, [folderId]);
+
+  if (!initialVaultState.valid) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-3 bg-background px-6 text-center">
+        <p className="text-sm text-muted-foreground">This vault could not be found.</p>
+        <Link
+          href="/dashboard"
+          className="text-sm font-medium text-foreground underline-offset-4 hover:underline"
+        >
+          Back to hub
+        </Link>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-full flex-col bg-background">
       <header className="flex h-10 shrink-0 items-center justify-between border-b border-border/60 bg-sidebar px-3">
         <div className="flex items-center gap-1">
+          <Link
+            href="/dashboard"
+            className="inline-flex size-7 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground"
+            aria-label="Back to hub"
+            title="Back to hub"
+          >
+            <ArrowLeft className="size-4" />
+          </Link>
           <button
             type="button"
             onClick={toggleSidebar}
@@ -243,11 +333,45 @@ export function AppShell() {
             <PanelLeft className="size-4" />
           </button>
           <span className="ml-1 text-sm font-semibold tracking-tight">
-            brAIn.md
+            {vaultName}
           </span>
         </div>
 
         <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={handleToggleAiNoWrite}
+            disabled={!canToggleLlmAccess}
+            className={cn(
+              "inline-flex size-7 items-center justify-center rounded-sm transition-colors",
+              aiNoWriteActive
+                ? "bg-sidebar-accent text-foreground"
+                : "text-muted-foreground hover:bg-sidebar-accent hover:text-foreground",
+              !canToggleLlmAccess && "pointer-events-none opacity-40",
+            )}
+            aria-label="Toggle AI read-only"
+            aria-pressed={aiNoWriteActive}
+            title="AI read-only — LLM can read but not edit this note"
+          >
+            <Lock className="size-4" />
+          </button>
+          <button
+            type="button"
+            onClick={handleToggleAiHidden}
+            disabled={!canToggleLlmAccess}
+            className={cn(
+              "inline-flex size-7 items-center justify-center rounded-sm transition-colors",
+              aiHiddenActive
+                ? "bg-sidebar-accent text-foreground"
+                : "text-muted-foreground hover:bg-sidebar-accent hover:text-foreground",
+              !canToggleLlmAccess && "pointer-events-none opacity-40",
+            )}
+            aria-label="Toggle hidden from AI"
+            aria-pressed={aiHiddenActive}
+            title="Hidden from AI — LLM cannot read or edit this note"
+          >
+            <EyeOff className="size-4" />
+          </button>
           <button
             type="button"
             onClick={() => setCommandOpen(true)}
@@ -275,7 +399,7 @@ export function AppShell() {
           fileTree={fileTree}
           fileName={fileName}
           markdown={markdown}
-          readOnly={readOnly}
+          llmAccessLabel={llmAccessLabel}
           onMarkdownChange={handleMarkdownChange}
           selectedFileId={selectedFileId}
           onSelectFile={handleSelectFile}
@@ -286,7 +410,9 @@ export function AppShell() {
           onDeleteFile={handleDeleteFile}
           onRenameFolder={openRenameFolderDialog}
           onDeleteFolder={handleDeleteFolder}
+          onSetLlmAccess={handleSetLlmAccess}
           expandFolderId={expandFolderId}
+          defaultExpandedIds={[folderId]}
           sidebarCollapsed={sidebarCollapsed}
           onSidebarCollapsedChange={setSidebarCollapsed}
           sidebarRef={sidebarRef}
@@ -301,6 +427,7 @@ export function AppShell() {
           open={commandOpen}
           onOpenChange={setCommandOpen}
           fileTree={fileTree}
+          selectedFileId={selectedFileId}
           onSelectFile={handleSelectFile}
           onCreateFile={openCreateDialog}
         />
