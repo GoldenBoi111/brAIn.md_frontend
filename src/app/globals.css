@@ -216,9 +216,8 @@
   align-items: center;
   justify-content: center;
   padding: 2rem 1rem;
-  background:
-    radial-gradient(ellipse at top, rgba(255, 255, 255, 0.06), transparent 55%),
-    linear-gradient(to bottom, #18181b, #0f0f11);
+  overflow: hidden;
+  background: #0f0f11;
   color: var(--foreground);
 }
 
@@ -376,12 +375,16 @@
 /* ── Dashboard hub ─────────────────────────────────────────────── */
 
 .hub-page {
+  position: relative;
   min-height: 100%;
+  overflow: hidden;
   background: #111113;
   color: #fafafa;
 }
 
 .hub-page__inner {
+  position: relative;
+  z-index: 1;
   margin: 0 auto;
   max-width: 36rem;
   padding: 3rem 1.5rem 4rem;
@@ -476,6 +479,16 @@
   list-style: none;
   margin: 0;
   padding: 0;
+  width: 100%;
+  text-align: left;
+}
+
+.hub-page__list li {
+  width: 100%;
+}
+
+.hub-page__link-wrap {
+  cursor: pointer;
 }
 
 .hub-page__link {
@@ -551,18 +564,17 @@
   gap: 0.625rem;
   width: 100%;
   padding: 0.875rem 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: none;
   border-radius: 0.5rem;
-  background: #1c1c1f;
+  background: transparent;
   font-size: 0.9375rem;
   font-weight: 500;
   color: #fafafa;
-  transition: background 0.15s, border-color 0.15s;
+  transition: color 0.15s;
 }
 
 .hub-page__cta:hover {
-  background: #27272a;
-  border-color: rgba(255, 255, 255, 0.18);
+  color: #fafafa;
 }
 
 .hub-page__footer {

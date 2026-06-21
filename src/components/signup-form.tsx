@@ -4,8 +4,13 @@ import { useState } from "react";
 import Link from "next/link";
 import { Brain, Loader2, Lock, Sparkles } from "lucide-react";
 
+import FadeContent from "@/components/FadeContent";
+import GlareHover from "@/components/GlareHover";
+import GradientText from "@/components/GradientText";
 import { setAuthenticated } from "@/lib/auth";
 import { BackendApiError, backendApi } from "@/lib/backend-api";
+
+const BRAND_GRADIENT = ["#a78bfa", "#fafafa", "#818cf8"];
 
 export function SignupForm() {
   const [email, setEmail] = useState("");
@@ -53,17 +58,36 @@ export function SignupForm() {
 
   return (
     <>
-      <div className="login-page__brand">
-        <div className="login-page__logo">
-          <Brain className="size-7 text-foreground" />
+      <FadeContent blur duration={900} delay={0} threshold={0.05}>
+        <div className="login-page__brand">
+          <div className="login-page__logo">
+            <Brain className="size-7 text-foreground" />
+          </div>
+          <GradientText
+            colors={BRAND_GRADIENT}
+            animationSpeed={6}
+            className="login-page__title mx-auto inline-flex"
+          >
+            brAIn.md
+          </GradientText>
+          <p className="login-page__subtitle">
+            Create an account to start your vault
+          </p>
         </div>
-        <h1 className="login-page__title">brAIn.md</h1>
-        <p className="login-page__subtitle">
-          Create an account to start your vault
-        </p>
-      </div>
+      </FadeContent>
 
-      <div className="login-card">
+      <FadeContent blur duration={900} delay={120} threshold={0.05}>
+      <GlareHover
+        width="100%"
+        height="auto"
+        background="var(--card)"
+        borderColor="var(--border)"
+        borderRadius="1rem"
+        glareColor="#a78bfa"
+        glareOpacity={0.28}
+        className="login-card !block w-full !cursor-default !place-items-stretch"
+        style={{ width: "100%", display: "block" }}
+      >
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="login-card__field">
             <label htmlFor="signup-email" className="login-card__label">
@@ -145,12 +169,15 @@ export function SignupForm() {
             <span>After sign-up you&apos;ll land on your vault hub.</span>
           </div>
         </div>
-      </div>
+      </GlareHover>
+      </FadeContent>
 
-      <p className="login-page__footer">
-        Already have an account?{" "}
-        <Link href="/login">Sign in</Link>
-      </p>
+      <FadeContent blur duration={800} delay={220} threshold={0.05}>
+        <p className="login-page__footer">
+          Already have an account?{" "}
+          <Link href="/login">Sign in</Link>
+        </p>
+      </FadeContent>
     </>
   );
 }
