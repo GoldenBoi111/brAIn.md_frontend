@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Brain, Loader2, Lock, Sparkles } from "lucide-react";
 
 import { setAuthenticated } from "@/lib/auth";
+import { BackendApiError, backendApi } from "@/lib/backend-api";
 
 export function SignupForm() {
   const [email, setEmail] = useState("");
@@ -13,7 +14,7 @@ export function SignupForm() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (isLoading) return;
@@ -32,10 +33,22 @@ export function SignupForm() {
 
     setIsLoading(true);
 
-    window.setTimeout(() => {
-      setAuthenticated(email.trim());
+    try {
+      const { user } = await backendApi.register({
+        email: email.trim(),
+        password,
+      });
+
+      setAuthenticated(user.email);
       window.location.assign("/dashboard");
-    }, 400);
+    } catch (err) {
+      setIsLoading(false);
+      if (err instanceof BackendApiError) {
+        setError(err.message);
+        return;
+      }
+      setError("Something went wrong. Please try again.");
+    }
   };
 
   return (
@@ -46,7 +59,7 @@ export function SignupForm() {
         </div>
         <h1 className="login-page__title">brAIn.md</h1>
         <p className="login-page__subtitle">
-          Create an account to start your local vault
+          Create an account to start your vault
         </p>
       </div>
 
@@ -125,7 +138,7 @@ export function SignupForm() {
         <div className="mt-6 space-y-3 border-t border-border/60 pt-5">
           <div className="login-card__hint">
             <Lock className="size-4" />
-            <span>Your notes stay on your machine. Nothing leaves this device.</span>
+            <span>Secure sign-up to start organizing your vault.</span>
           </div>
           <div className="login-card__hint">
             <Sparkles className="size-4" />
