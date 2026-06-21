@@ -429,10 +429,10 @@ export function BackendTokenAdmin() {
       <div className="backend-token-admin__head">
         <div>
           <p className="backend-page__eyebrow">Token administration</p>
-            <h3 className="backend-token-admin__title">Generate, rename, refresh, and retire tokens.</h3>
-            <p className="backend-token-admin__lede">
-            Keep the controls local for now. The tokens can be named, refreshed, deleted, tagged with a visual identity,
-            and assigned token-scoped vault rules without turning on a backend.
+          <h3 className="backend-token-admin__title">Generate, rename, refresh, and retire tokens.</h3>
+          <p className="backend-token-admin__lede">
+            Keep the controls aligned with the secure website API. Tokens can be named, refreshed,
+            deleted, tagged with a visual identity, and assigned token-scoped vault rules.
           </p>
         </div>
 

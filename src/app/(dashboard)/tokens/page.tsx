@@ -41,18 +41,18 @@ export default function TokensPage() {
 
       <section className="backend-page__hero">
         <div className="backend-page__hero-copy">
-          <p className="backend-page__eyebrow">Local-first</p>
+          <p className="backend-page__eyebrow">Production-ready</p>
           <h2 className="backend-page__hero-title">Create, rename, refresh, and retire tokens.</h2>
           <p className="backend-page__hero-lede">
-            The controls stay inside the app for now, so you can prototype token workflows, names,
-            avatars, and provider identities without turning on any backend.
+            The controls are designed to work through the secure website API, so token workflows,
+            names, avatars, and provider identities stay consistent in production.
           </p>
         </div>
 
         <div className="backend-page__hero-panel">
           <div className="backend-page__hero-stat">
             <span>Storage</span>
-            <strong>Local</strong>
+            <strong>Secure</strong>
           </div>
           <div className="backend-page__hero-stat">
             <span>Tokens</span>
@@ -68,7 +68,7 @@ export default function TokensPage() {
       <section className="backend-page__notes">
         <article className="backend-page__note">
           <Shield className="size-4" />
-          <p>Names, image choices, refresh actions, and deletes all persist locally.</p>
+          <p>Names, image choices, refresh actions, and deletes all persist securely.</p>
         </article>
         <article className="backend-page__note">
           <Shield className="size-4" />
@@ -76,7 +76,7 @@ export default function TokensPage() {
         </article>
         <article className="backend-page__note">
           <Shield className="size-4" />
-          <p>You can wire these controls to a real backend later without changing the page layout.</p>
+          <p>You can wire these controls to the live backend without changing the page layout.</p>
         </article>
       </section>
 

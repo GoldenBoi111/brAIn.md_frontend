@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 
 import { createMockBackendResponse } from "@/lib/backend-mock";
 
-const BACKEND_BASE_URL = process.env.BACKEND_API_BASE_URL?.trim() ?? "";
+const BACKEND_BASE_URL =
+  process.env.BACKEND_API_BASE_URL?.trim() ??
+  (process.env.NODE_ENV === "production" ? "https://mcp.brain-dev.dev" : "");
 
 function normalizePath(pathname: string): string {
   return pathname.replace(/^\/api\/bridge/, "") || "/";
