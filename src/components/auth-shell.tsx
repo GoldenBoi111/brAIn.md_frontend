@@ -19,13 +19,6 @@ export function AuthShell({ children }: AuthShellProps) {
       <div
         className="login-page__note"
         aria-hidden="true"
-        style={{ left: "12%", top: "20%", transform: "rotate(10deg)" }}
-      >
-        offline ready
-      </div>
-      <div
-        className="login-page__note"
-        aria-hidden="true"
         style={{ right: "12%", top: "22%", transform: "rotate(-9deg)" }}
       >
         live linking
