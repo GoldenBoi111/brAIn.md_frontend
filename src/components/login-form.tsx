@@ -53,7 +53,7 @@ export function LoginForm() {
         <p className="login-page__eyebrow">Personal memory graph</p>
         <h1 className="login-page__title">Open the notebook brain</h1>
         <p className="login-page__subtitle">
-          Sign in to the local vault, browse the graph, and keep every memory anchored in one place.
+          Sign in to the AI-connected vault, browse the graph, and keep every memory anchored with live links.
         </p>
       </div>
 
@@ -131,12 +131,12 @@ export function LoginForm() {
 
         <div className="login-card__notes">
           <div className="login-card__hint">
-            <Lock className="size-4" />
-            <span>No backend is required for this build.</span>
+            <Sparkles className="size-4" />
+            <span>AI connectivity keeps the graph ready for linked search and recall.</span>
           </div>
           <div className="login-card__hint">
-            <Sparkles className="size-4" />
-            <span>Your session is stored locally so you can open the app offline.</span>
+            <Lock className="size-4" />
+            <span>Sessions stay local for this prototype, so you can open the app offline.</span>
           </div>
         </div>
       </section>

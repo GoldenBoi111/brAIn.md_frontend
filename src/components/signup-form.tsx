@@ -50,7 +50,7 @@ export function SignupForm() {
         <p className="login-page__eyebrow">Personal memory graph</p>
         <h1 className="login-page__title">Start a fresh notebook vault</h1>
         <p className="login-page__subtitle">
-          Create a local account, then begin linking notes into the graph without needing a live backend.
+          Create an account for the AI-connected vault, then begin linking notes into the graph immediately.
         </p>
       </div>
 
@@ -135,12 +135,12 @@ export function SignupForm() {
 
         <div className="login-card__notes">
           <div className="login-card__hint">
-            <Lock className="size-4" />
-            <span>Your account is stored locally for this prototype.</span>
+            <Sparkles className="size-4" />
+            <span>AI connectivity keeps search, linking, and recall close to the graph.</span>
           </div>
           <div className="login-card__hint">
-            <Sparkles className="size-4" />
-            <span>After sign-up you&apos;ll open the graph immediately.</span>
+            <Lock className="size-4" />
+            <span>Your account stays local for this prototype, then opens the graph right away.</span>
           </div>
         </div>
       </section>

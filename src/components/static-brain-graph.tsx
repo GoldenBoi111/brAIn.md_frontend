@@ -28,11 +28,11 @@ import {
 const CORE_NODE_ID = "atlas";
 
 const LIGHT_CLUSTER_ACCENTS: Record<MemoryCluster, string> = {
-  research: "#220901",
-  projects: "#621708",
-  people: "#941b0c",
-  concepts: "#bc3908",
-  experiences: "#f6aa1c",
+  research: "#44af69",
+  projects: "#f8333c",
+  people: "#2b9eb3",
+  concepts: "#fcab10",
+  experiences: "#dbd5b5",
 };
 
 const DARK_CLUSTER_ACCENTS: Record<MemoryCluster, string> = {
@@ -72,6 +72,7 @@ export function StaticBrainGraph() {
 
   const previewId = hoveredId ?? pinnedId;
   const previewNode = getMemoryById(previewId) ?? MEMORY_NODES[0];
+  const brainVault = vaults[0] ?? null;
   const activeConnections = useMemo(() => {
     return MEMORY_LINKS.filter(
       (link) => link.source === previewId || link.target === previewId,
@@ -104,6 +105,16 @@ export function StaticBrainGraph() {
     setSearchQuery("");
     setHoveredId(null);
     setPinnedId(memoryId);
+  };
+
+  const handleUnselect = () => {
+    setHoveredId(null);
+    setPinnedId(CORE_NODE_ID);
+  };
+
+  const handleOpenInVault = () => {
+    if (!brainVault) return;
+    window.location.assign(`/vault/${brainVault.id}`);
   };
 
   useEffect(() => {
@@ -140,6 +151,14 @@ export function StaticBrainGraph() {
             <kbd>Cmd / Ctrl K</kbd>
           </button>
           <ThemeToggleButton />
+          <button
+            type="button"
+            className="memory-app__icon-button"
+            onClick={handleUnselect}
+            aria-label="Unselect memory"
+          >
+            <X className="size-4" />
+          </button>
           <button
             type="button"
             className="memory-app__icon-button"
@@ -222,6 +241,15 @@ export function StaticBrainGraph() {
 
           <div className="static-brain-graph__panel-body">
             <p className="static-brain-graph__panel-summary">{previewNode.summary}</p>
+
+            <div className="memory-panel__actions static-brain-graph__panel-actions">
+              <button type="button" onClick={handleUnselect}>
+                Clear selection
+              </button>
+              <button type="button" onClick={handleOpenInVault} disabled={!brainVault}>
+                Open in editor
+              </button>
+            </div>
 
             <dl className="static-brain-graph__facts">
               <div>

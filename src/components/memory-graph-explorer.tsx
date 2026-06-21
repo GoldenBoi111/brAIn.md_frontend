@@ -92,11 +92,11 @@ const clusterPositions: Record<MemoryCluster, { x: number; y: number }> = {
 };
 
 const clusterPalette: Record<MemoryCluster, string> = {
-  research: "#4F46E5",
-  projects: "#111111",
-  people: "#6366F1",
-  concepts: "#52525B",
-  experiences: "#0F172A",
+  research: "#44af69",
+  projects: "#f8333c",
+  people: "#2b9eb3",
+  concepts: "#fcab10",
+  experiences: "#dbd5b5",
 };
 
 const CORE_NODE_ID = "atlas";
@@ -832,6 +832,16 @@ export function MemoryGraphExplorer() {
     [focusMemory],
   );
 
+  const handleClearSelection = useCallback(() => {
+    setHoveredId(null);
+    setSelectedIds(["atlas"]);
+    focusMemory("atlas");
+  }, [focusMemory]);
+
+  const handleOpenInVault = useCallback(() => {
+    window.location.assign("/vault/folder-brain-vault");
+  }, []);
+
   const handleSelectMemory = useCallback(
     (memoryId: string) => {
       setSearchOpen(false);
@@ -842,7 +852,7 @@ export function MemoryGraphExplorer() {
   );
 
   const handleContextAction = useCallback(
-    async (action: "open" | "copy" | "focus-cluster") => {
+    async (action: "open" | "copy" | "focus-cluster" | "open-vault") => {
       if (!contextMenu) return;
       const memory = getMemoryById(contextMenu.id);
       if (!memory) return;
@@ -851,13 +861,15 @@ export function MemoryGraphExplorer() {
         await navigator.clipboard.writeText(memory.title);
       } else if (action === "focus-cluster") {
         focusMemory(memory.cluster);
+      } else if (action === "open-vault") {
+        handleOpenInVault();
       } else {
         handleOpenMemory(memory.id);
       }
 
       setContextMenu(null);
     },
-    [contextMenu, focusMemory, handleOpenMemory],
+    [contextMenu, focusMemory, handleOpenInVault, handleOpenMemory],
   );
 
   const panelRelated = useMemo(() => {
@@ -889,7 +901,7 @@ export function MemoryGraphExplorer() {
           <button type="button" className="memory-app__search" onClick={() => setSearchOpen(true)}>
             <Search className="size-4" />
             <span>Search memories</span>
-            <kbd>Ctrl K</kbd>
+            <kbd>Cmd / Ctrl K</kbd>
           </button>
           <ThemeToggleButton />
           <button
@@ -899,6 +911,14 @@ export function MemoryGraphExplorer() {
             aria-label="Center graph"
           >
             <LayoutGrid className="size-4" />
+          </button>
+          <button
+            type="button"
+            className="memory-app__icon-button"
+            onClick={handleClearSelection}
+            aria-label="Unselect memory"
+          >
+            <X className="size-4" />
           </button>
           <button
             type="button"
@@ -1014,6 +1034,12 @@ export function MemoryGraphExplorer() {
             <section className="memory-panel__section">
               <h3>Actions</h3>
               <div className="memory-panel__actions">
+                <button type="button" onClick={handleClearSelection}>
+                  Clear selection
+                </button>
+                <button type="button" onClick={handleOpenInVault}>
+                  Open in editor
+                </button>
                 <button type="button" onClick={() => handleOpenMemory(selectedMemory.id)}>
                   Open memory
                 </button>
@@ -1055,6 +1081,9 @@ export function MemoryGraphExplorer() {
           </button>
           <button type="button" onClick={() => handleContextAction("focus-cluster")}>
             Focus cluster
+          </button>
+          <button type="button" onClick={() => handleContextAction("open-vault")}>
+            Open in editor
           </button>
           <button type="button" onClick={() => handleContextAction("copy")}>
             Copy title
