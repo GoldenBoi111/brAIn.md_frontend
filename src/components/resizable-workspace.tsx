@@ -28,6 +28,8 @@ interface ResizableWorkspaceProps {
   markdown: string;
   llmAccessLabel?: string | null;
   onMarkdownChange: (value: string) => void;
+  onSaveMarkdown?: () => void;
+  canSaveMarkdown?: boolean;
   selectedFileId: string | null;
   onSelectFile: (id: string) => void;
   onCreateFile: () => void;
@@ -55,6 +57,8 @@ export function ResizableWorkspace({
   markdown,
   llmAccessLabel,
   onMarkdownChange,
+  onSaveMarkdown,
+  canSaveMarkdown = true,
   selectedFileId,
   onSelectFile,
   onCreateFile,
@@ -140,6 +144,8 @@ export function ResizableWorkspace({
               value={markdown}
               llmAccessLabel={llmAccessLabel}
               onChange={onMarkdownChange}
+              onSave={onSaveMarkdown}
+              canSave={canSaveMarkdown}
             />
           </ResizablePanel>
 

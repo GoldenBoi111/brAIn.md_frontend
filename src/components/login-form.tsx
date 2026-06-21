@@ -31,7 +31,7 @@ export function LoginForm() {
     try {
       setAuthenticated(email.trim());
 
-      const nextPath = searchParams.get("next");
+      const nextPath = searchParams?.get("next");
       const destination =
         nextPath?.startsWith("/") && !nextPath.startsWith("//")
           ? nextPath

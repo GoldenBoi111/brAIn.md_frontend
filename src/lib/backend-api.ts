@@ -1,5 +1,4 @@
-export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://api.example.com";
+export const API_BASE_PATH = "/api/bridge";
 
 export const FILLER_FILE_ID = "file-example-id";
 export const FILLER_TOKEN_ID = "token-example-id";
@@ -40,15 +39,18 @@ async function request<T>(
   path: string,
   options: RequestOptions = {},
 ): Promise<T> {
-  const url = new URL(path, API_BASE_URL);
+  const searchParams = new URLSearchParams();
 
   if (options.query) {
     for (const [key, value] of Object.entries(options.query)) {
       if (value !== undefined) {
-        url.searchParams.set(key, String(value));
+        searchParams.set(key, String(value));
       }
     }
   }
+
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const url = `${API_BASE_PATH}${normalizedPath}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
 
   let response: Response;
 
@@ -207,6 +209,14 @@ export const backendApi = {
     subject: string;
     tokenName?: string;
     token_name?: string;
+    avatarProvider?: string;
+    avatar_provider?: string;
+    avatarImage?: string;
+    avatar_image?: string;
+    lockedPaths?: string[];
+    locked_paths?: string[];
+    readOnlyPaths?: string[];
+    read_only_paths?: string[];
     scopes?: string[];
     readRoots?: string[];
     read_roots?: string[];
@@ -228,6 +238,14 @@ export const backendApi = {
     subject: string;
     tokenName?: string;
     token_name?: string;
+    avatarProvider?: string;
+    avatar_provider?: string;
+    avatarImage?: string;
+    avatar_image?: string;
+    lockedPaths?: string[];
+    locked_paths?: string[];
+    readOnlyPaths?: string[];
+    read_only_paths?: string[];
     scopes?: string[];
     readRoots?: string[];
     read_roots?: string[];

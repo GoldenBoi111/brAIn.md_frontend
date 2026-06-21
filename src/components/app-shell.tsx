@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, EyeOff, Lock, PanelLeft, PanelRight, Search } from "lucide-react";
 
 import { CommandPalette } from "@/components/command-palette";
@@ -10,6 +11,7 @@ import { CreateFolderDialog } from "@/components/create-folder-dialog";
 import { RenameFileDialog } from "@/components/rename-file-dialog";
 import { RenameFolderDialog } from "@/components/rename-folder-dialog";
 import { ResizableWorkspace } from "@/components/resizable-workspace";
+import { TokenAccessPalette } from "@/components/token-access-palette";
 import { ThemeToggleButton } from "@/components/theme-toggle-button";
 import {
   usePreviewControls,
@@ -19,8 +21,9 @@ import {
   DEFAULT_FILE_ID,
   MOCK_FILE_CONTENTS,
 } from "@/lib/mock-data";
-import { getLlmAccess, getLlmAccessLabel, isLlmHidden, isLlmNoWrite, toggleLlmHidden, toggleLlmNoWrite } from "@/lib/llm-access";
+import { getLlmAccess, getLlmAccessLabel } from "@/lib/llm-access";
 import { getFileTree } from "@/lib/vault-catalog";
+import { loadVaultFileContents, saveVaultFileContents } from "@/lib/vault-contents";
 import { cn } from "@/lib/utils";
 import {
   collectFileIdsInSubtree,
@@ -28,6 +31,7 @@ import {
   createFolderInTree,
   findFileNode,
   getFirstSelectableFileId,
+  getFilePath,
   removeFileFromTree,
   removeFolderFromTree,
   renameFileInTree,
@@ -65,6 +69,7 @@ interface AppShellProps {
 }
 
 export function AppShell({ folderId }: AppShellProps) {
+  const router = useRouter();
   const { sidebarRef, sidebarCollapsed, setSidebarCollapsed, toggleSidebar } =
     useSidebarControls();
   const { previewRef, previewCollapsed, setPreviewCollapsed, togglePreview } =
@@ -74,6 +79,8 @@ export function AppShell({ folderId }: AppShellProps) {
   const [createFolderDialogOpen, setCreateFolderDialogOpen] = useState(false);
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [renameFolderDialogOpen, setRenameFolderDialogOpen] = useState(false);
+  const [tokenAccessOpen, setTokenAccessOpen] = useState(false);
+  const [tokenAccessMode, setTokenAccessMode] = useState<"locked" | "readOnly">("locked");
   const [renameFileId, setRenameFileId] = useState<string | null>(null);
   const [renameFolderId, setRenameFolderId] = useState<string | null>(null);
   const [createParentFolderId, setCreateParentFolderId] = useState<string | null>(
@@ -92,7 +99,7 @@ export function AppShell({ folderId }: AppShellProps) {
     () => initialVaultState.selectedId,
   );
   const [fileContents, setFileContents] = useState<Record<string, string>>(
-    () => ({ ...MOCK_FILE_CONTENTS }),
+    () => ({ ...MOCK_FILE_CONTENTS, ...loadVaultFileContents() }),
   );
 
   const selectedFile = useMemo(
@@ -109,11 +116,8 @@ export function AppShell({ folderId }: AppShellProps) {
     return getLlmAccessLabel(access);
   }, [selectedFile]);
 
-  const selectedLlmAccess =
-    selectedFile?.type === "file" ? getLlmAccess(selectedFile) : null;
-  const aiNoWriteActive = selectedLlmAccess ? isLlmNoWrite(selectedLlmAccess) : false;
-  const aiHiddenActive = selectedLlmAccess ? isLlmHidden(selectedLlmAccess) : false;
-  const canToggleLlmAccess = selectedFile?.type === "file";
+  const selectedFilePath =
+    selectedFile?.type === "file" && selectedFileId ? getFilePath(fileTree, selectedFileId) : null;
 
   const handleSelectFile = useCallback(
     (id: string) => {
@@ -131,6 +135,10 @@ export function AppShell({ folderId }: AppShellProps) {
     },
     [selectedFileId],
   );
+
+  const handleSaveMarkdown = useCallback(() => {
+    saveVaultFileContents(fileContents);
+  }, [fileContents]);
 
   const openCreateDialog = useCallback((parentFolderId: string | null) => {
     setCreateParentFolderId(parentFolderId);
@@ -274,20 +282,6 @@ export function AppShell({ folderId }: AppShellProps) {
     [fileTree],
   );
 
-  const handleToggleAiNoWrite = useCallback(() => {
-    if (!selectedFileId || selectedFile?.type !== "file" || !selectedLlmAccess) {
-      return;
-    }
-    handleSetLlmAccess(selectedFileId, toggleLlmNoWrite(selectedLlmAccess));
-  }, [handleSetLlmAccess, selectedFile, selectedFileId, selectedLlmAccess]);
-
-  const handleToggleAiHidden = useCallback(() => {
-    if (!selectedFileId || selectedFile?.type !== "file" || !selectedLlmAccess) {
-      return;
-    }
-    handleSetLlmAccess(selectedFileId, toggleLlmHidden(selectedLlmAccess));
-  }, [handleSetLlmAccess, selectedFile, selectedFileId, selectedLlmAccess]);
-
   const renameFolderName =
     renameFolderId ? (findFileNode(fileTree, renameFolderId)?.name ?? "") : "";
 
@@ -298,6 +292,10 @@ export function AppShell({ folderId }: AppShellProps) {
     const folder = findFileNode(getFileTree(), folderId);
     return folder?.name ?? "Vault";
   }, [folderId]);
+
+  useEffect(() => {
+    router.prefetch("/dashboard");
+  }, [router]);
 
   if (!initialVaultState.valid) {
     return (
@@ -344,34 +342,34 @@ export function AppShell({ folderId }: AppShellProps) {
           <ThemeToggleButton />
           <button
             type="button"
-            onClick={handleToggleAiNoWrite}
-            disabled={!canToggleLlmAccess}
+            onClick={() => {
+              setTokenAccessMode("locked");
+              setTokenAccessOpen(true);
+            }}
+            disabled={!selectedFilePath}
             className={cn(
               "vault-shell__icon-button",
-              aiNoWriteActive
-                ? "vault-shell__icon-button--active"
-                : "",
-              !canToggleLlmAccess && "pointer-events-none opacity-40",
+              !selectedFilePath && "pointer-events-none opacity-40",
             )}
-            aria-label="Toggle AI read-only"
-            aria-pressed={aiNoWriteActive}
+            aria-label="Open token lock palette"
+            aria-pressed={false}
             title="AI read-only — LLM can read but not edit this note"
           >
             <Lock className="size-4" />
           </button>
           <button
             type="button"
-            onClick={handleToggleAiHidden}
-            disabled={!canToggleLlmAccess}
+            onClick={() => {
+              setTokenAccessMode("readOnly");
+              setTokenAccessOpen(true);
+            }}
+            disabled={!selectedFilePath}
             className={cn(
               "vault-shell__icon-button",
-              aiHiddenActive
-                ? "vault-shell__icon-button--active"
-                : "",
-              !canToggleLlmAccess && "pointer-events-none opacity-40",
+              !selectedFilePath && "pointer-events-none opacity-40",
             )}
-            aria-label="Toggle hidden from AI"
-            aria-pressed={aiHiddenActive}
+            aria-label="Open token write restriction palette"
+            aria-pressed={false}
             title="Hidden from AI — LLM cannot read or edit this note"
           >
             <EyeOff className="size-4" />
@@ -405,6 +403,8 @@ export function AppShell({ folderId }: AppShellProps) {
           markdown={markdown}
           llmAccessLabel={llmAccessLabel}
           onMarkdownChange={handleMarkdownChange}
+          onSaveMarkdown={handleSaveMarkdown}
+          canSaveMarkdown={Boolean(selectedFileId)}
           selectedFileId={selectedFileId}
           onSelectFile={handleSelectFile}
           onCreateFile={handleExplorerCreate}
@@ -426,6 +426,16 @@ export function AppShell({ folderId }: AppShellProps) {
           vaultName={vaultName}
         />
       </div>
+
+      {tokenAccessOpen ? (
+        <TokenAccessPalette
+          open={tokenAccessOpen}
+          onOpenChange={setTokenAccessOpen}
+          mode={tokenAccessMode}
+          fileName={fileName}
+          filePath={selectedFilePath}
+        />
+      ) : null}
 
       {commandOpen ? (
         <CommandPalette
