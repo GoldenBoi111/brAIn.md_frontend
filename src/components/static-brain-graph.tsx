@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import { Brain, ChevronRight, EyeOff, Search, X } from "lucide-react";
 
 import BrainAnimation from "@/components/brain-animation";
@@ -15,42 +15,85 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { clearAuthenticatedSession } from "@/lib/auth";
-import { getHubVaults } from "@/lib/vault-catalog";
 import {
-  getMemoryById,
-  getMemorySearchIndex,
-  MEMORY_LINKS,
-  MEMORY_NODES,
-  type MemoryCluster,
-  type MemoryRecord,
-} from "@/lib/memory-graph";
+  buildFileTreeGraph,
+  getFileGraphSearchIndex,
+  type FileGraphRecord,
+} from "@/lib/file-tree-graph";
+import { getFileTree } from "@/lib/vault-catalog";
+import type { FileNode } from "@/types/file-tree";
 
-const CORE_NODE_ID = "atlas";
+const LIGHT_CLUSTER_ACCENTS = ["#220901", "#621708", "#941b0c", "#bc3908", "#f6aa1c"];
+const DARK_CLUSTER_ACCENTS = ["#44af69", "#f8333c", "#fcab10", "#2b9eb3", "#dbd5b5"];
 
-const LIGHT_CLUSTER_ACCENTS: Record<MemoryCluster, string> = {
-  research: "#44af69",
-  projects: "#f8333c",
-  people: "#2b9eb3",
-  concepts: "#fcab10",
-  experiences: "#dbd5b5",
-};
+function hashString(value: string) {
+  let hash = 0;
 
-const DARK_CLUSTER_ACCENTS: Record<MemoryCluster, string> = {
-  research: "#dbd5b5",
-  projects: "#fcab10",
-  people: "#44af69",
-  concepts: "#2b9eb3",
-  experiences: "#f8333c",
-};
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
+  }
 
-export function StaticBrainGraph() {
+  return hash;
+}
+
+function pickAccent(cluster: string, isDark: boolean) {
+  const palette = isDark ? DARK_CLUSTER_ACCENTS : LIGHT_CLUSTER_ACCENTS;
+  return palette[hashString(cluster) % palette.length];
+}
+
+function useVaultFileTree(fileTree?: FileNode[]) {
+  const [currentTree, setCurrentTree] = useState<FileNode[]>(() => fileTree ?? getFileTree());
+
+  useEffect(() => {
+    if (fileTree) {
+      setCurrentTree(fileTree);
+      return;
+    }
+
+    const syncTree = () => setCurrentTree(getFileTree());
+    syncTree();
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === "brain-md-user-folders") {
+        syncTree();
+      }
+    };
+
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, [fileTree]);
+
+  return currentTree;
+}
+
+interface StaticBrainGraphProps {
+  fileTree?: FileNode[];
+}
+
+export function StaticBrainGraph({ fileTree: fileTreeProp }: StaticBrainGraphProps = {}) {
   const [isDark, setIsDark] = useState(false);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const [pinnedId, setPinnedId] = useState<string | null>(CORE_NODE_ID);
+  const [pinnedId, setPinnedId] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [hideUnconnectedDots, setHideUnconnectedDots] = useState(false);
-  const vaults = useMemo(() => getHubVaults(), []);
+
+  const fileTree = useVaultFileTree(fileTreeProp);
+  const graph = useMemo(() => buildFileTreeGraph(fileTree), [fileTree]);
+  const graphNodes = useMemo(
+    () =>
+      graph.nodes.map((node) => ({
+        id: node.id,
+        title: node.title,
+        accent: pickAccent(node.cluster, isDark),
+      })),
+    [graph.nodes, isDark],
+  );
+
+  const rootNode = graph.nodes.find((node) => node.parentFolderId === null) ?? graph.nodes[0] ?? null;
+  const nodeLookup = useMemo(() => new Map(graph.nodes.map((node) => [node.id, node])), [graph.nodes]);
+  const previewId = hoveredId ?? pinnedId ?? rootNode?.id ?? null;
+  const previewNode = previewId ? nodeLookup.get(previewId) ?? null : null;
 
   useEffect(() => {
     const root = document.documentElement;
@@ -62,31 +105,32 @@ export function StaticBrainGraph() {
     return () => observer.disconnect();
   }, []);
 
-  const graphNodes = useMemo(() => {
-    const clusterAccents = isDark ? DARK_CLUSTER_ACCENTS : LIGHT_CLUSTER_ACCENTS;
-    return MEMORY_NODES.map((memory) => ({
-      id: memory.id,
-      title: memory.title,
-      accent: clusterAccents[memory.cluster],
-    }));
-  }, [isDark]);
-
-  const previewId = hoveredId ?? pinnedId;
-  const previewNode = previewId ? getMemoryById(previewId) ?? null : null;
-  const brainVault = vaults[0] ?? null;
   const activeConnections = useMemo(() => {
     if (!previewId) return [];
 
-    return MEMORY_LINKS.filter(
-      (link) => link.source === previewId || link.target === previewId,
-    ).map((link) => {
-      const otherId = link.source === previewId ? link.target : link.source;
-      return {
-        id: link.id,
-        other: getMemoryById(otherId),
-      };
-    }).filter((item): item is { id: string; other: MemoryRecord } => Boolean(item.other));
-  }, [previewId]);
+    return graph.links
+      .filter((link) => link.source === previewId || link.target === previewId)
+      .map((link) => {
+        const otherId = link.source === previewId ? link.target : link.source;
+        return {
+          id: link.id,
+          other: nodeLookup.get(otherId),
+        };
+      })
+      .filter((item): item is { id: string; other: FileGraphRecord } => Boolean(item.other));
+  }, [graph.links, nodeLookup, previewId]);
+
+  const searchMatches = useMemo(() => {
+    const normalized = searchQuery.trim().toLowerCase();
+    if (!normalized) return graph.nodes.slice(0, 24);
+
+    return graph.nodes
+      .filter((node) => getFileGraphSearchIndex(node).includes(normalized))
+      .slice(0, 24);
+  }, [graph.nodes, searchQuery]);
+
+  const fileCount = graph.nodes.filter((node) => node.fileType === "file").length;
+  const folderCount = graph.nodes.filter((node) => node.fileType === "folder").length;
 
   const siteLinks = useMemo(
     () => [
@@ -97,18 +141,11 @@ export function StaticBrainGraph() {
     [],
   );
 
-  const searchMatches = useMemo(() => {
-    const normalized = searchQuery.trim().toLowerCase();
-    if (!normalized) return MEMORY_NODES.slice(0, 24);
-
-    return MEMORY_NODES.filter((memory) => getMemorySearchIndex(memory).includes(normalized)).slice(0, 24);
-  }, [searchQuery]);
-
-  const handleSelectMemory = (memoryId: string) => {
+  const handleSelectNode = (nodeId: string) => {
     setSearchOpen(false);
     setSearchQuery("");
     setHoveredId(null);
-    setPinnedId(memoryId);
+    setPinnedId(nodeId);
   };
 
   const handleUnselect = () => {
@@ -117,8 +154,16 @@ export function StaticBrainGraph() {
   };
 
   const handleOpenInVault = () => {
-    if (!brainVault) return;
-    window.location.assign(`/vault/${brainVault.id}`);
+    const targetNode = previewNode ?? rootNode;
+    if (!targetNode) return;
+
+    const targetFolderId =
+      targetNode.fileType === "folder"
+        ? targetNode.id
+        : targetNode.parentFolderId ?? rootNode?.id;
+
+    if (!targetFolderId) return;
+    window.location.assign(`/vault/${targetFolderId}`);
   };
 
   useEffect(() => {
@@ -151,7 +196,7 @@ export function StaticBrainGraph() {
             onClick={() => setSearchOpen(true)}
           >
             <Search className="size-4" />
-            <span>Search memories</span>
+            <span>Search files</span>
             <kbd>Cmd / Ctrl K</kbd>
           </button>
           <ThemeToggleButton />
@@ -168,7 +213,7 @@ export function StaticBrainGraph() {
             type="button"
             className="memory-app__icon-button"
             onClick={handleUnselect}
-            aria-label="Unselect memory"
+            aria-label="Unselect node"
           >
             <X className="size-4" />
           </button>
@@ -193,16 +238,12 @@ export function StaticBrainGraph() {
               <p className="static-brain-graph__sidebar-eyebrow">Vaults</p>
               <h2 className="static-brain-graph__sidebar-title">Brain vault</h2>
               <nav className="static-brain-graph__sidebar-nav" aria-label="Vaults">
-                {vaults.map((vault) => (
-                  <Link
-                    key={vault.id}
-                    href={`/vault/${vault.id}`}
-                    className="static-brain-graph__sidebar-link"
-                  >
-                    <span>{vault.name}</span>
-                    <span>{vault.description}</span>
+                {rootNode ? (
+                  <Link href={`/vault/${rootNode.id}`} className="static-brain-graph__sidebar-link">
+                    <span>{rootNode.title}</span>
+                    <span>{fileCount} files, {folderCount} folders</span>
                   </Link>
-                ))}
+                ) : null}
               </nav>
             </section>
 
@@ -230,27 +271,27 @@ export function StaticBrainGraph() {
             autoAnimate={false}
             className="static-brain-graph__brain-canvas"
             graphNodes={graphNodes}
-            graphLinks={MEMORY_LINKS}
+            graphLinks={graph.links}
             activeNodeId={previewId}
             hideUnconnectedNodes={hideUnconnectedDots}
             onNodeHover={setHoveredId}
             onNodeSelect={setPinnedId}
           />
           <div className="static-brain-graph__scene-caption">
-            <span>Dots are real render vertices.</span>
+            <span>Dots are derived from the FileNode tree.</span>
             <span>Drag to rotate, hover to expand, click to pin.</span>
           </div>
         </section>
 
         <aside className="static-brain-graph__panel vault-pane">
           <div className="vault-pane__header static-brain-graph__panel-head">
-            <p className="static-brain-graph__panel-eyebrow">Selected memory</p>
+            <p className="static-brain-graph__panel-eyebrow">Selected node</p>
             <div className="static-brain-graph__panel-title-row">
               <h2 className="static-brain-graph__panel-title">
-                {previewNode ? previewNode.title : "No memory selected"}
+                {previewNode ? previewNode.title : "No node selected"}
               </h2>
               <span className="static-brain-graph__panel-chip">
-                {previewNode ? (previewNode.type === "cluster" ? "cluster" : "memory") : "idle"}
+                {previewNode ? previewNode.fileType : "idle"}
               </span>
             </div>
           </div>
@@ -264,7 +305,7 @@ export function StaticBrainGraph() {
                   <button type="button" onClick={handleUnselect}>
                     Clear selection
                   </button>
-                  <button type="button" onClick={handleOpenInVault} disabled={!brainVault}>
+                  <button type="button" onClick={handleOpenInVault} disabled={!rootNode}>
                     Open in editor
                   </button>
                 </div>
@@ -277,6 +318,10 @@ export function StaticBrainGraph() {
                   <div>
                     <dt>Cluster</dt>
                     <dd>{previewNode.cluster}</dd>
+                  </div>
+                  <div>
+                    <dt>Path</dt>
+                    <dd>{previewNode.path}</dd>
                   </div>
                 </dl>
 
@@ -341,7 +386,7 @@ export function StaticBrainGraph() {
       </main>
 
       <footer className="static-brain-graph__footer">
-        <p>These dots are embedded in the Three.js scene, so placement follows the brain itself.</p>
+        <p>These dots are derived from the FileNode tree, so placement follows your vault structure.</p>
         <p>
           {hoveredId ? "Hovering" : "Pinned"}: {previewNode ? previewNode.title : "nothing selected"}
         </p>
@@ -349,21 +394,21 @@ export function StaticBrainGraph() {
 
       <CommandDialog open={searchOpen} onOpenChange={setSearchOpen}>
         <CommandInput
-          placeholder="Search memories, tags, sources..."
+          placeholder="Search files, folders, and paths..."
           value={searchQuery}
           onValueChange={setSearchQuery}
         />
         <CommandList>
-          <CommandEmpty>No matching memories.</CommandEmpty>
-          <CommandGroup heading="Memories">
-            {searchMatches.map((memory) => (
+          <CommandEmpty>No matching nodes.</CommandEmpty>
+          <CommandGroup heading="Vault tree">
+            {searchMatches.map((node) => (
               <CommandItem
-                key={memory.id}
-                value={`${memory.title} ${memory.summary} ${memory.tags.join(" ")}`}
-                onSelect={() => handleSelectMemory(memory.id)}
+                key={node.id}
+                value={`${node.title} ${node.summary} ${node.tags.join(" ")}`}
+                onSelect={() => handleSelectNode(node.id)}
               >
                 <Search className="size-4" />
-                <span>{memory.title}</span>
+                <span>{node.title}</span>
               </CommandItem>
             ))}
           </CommandGroup>

@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, EyeOff, Lock, PanelLeft, PanelRight, Search } from "lucide-react";
 
 import { CommandPalette } from "@/components/command-palette";
@@ -67,6 +68,7 @@ interface AppShellProps {
 }
 
 export function AppShell({ folderId }: AppShellProps) {
+  const router = useRouter();
   const { sidebarRef, sidebarCollapsed, setSidebarCollapsed, toggleSidebar } =
     useSidebarControls();
   const { previewRef, previewCollapsed, setPreviewCollapsed, togglePreview } =
@@ -285,6 +287,10 @@ export function AppShell({ folderId }: AppShellProps) {
     const folder = findFileNode(getFileTree(), folderId);
     return folder?.name ?? "Vault";
   }, [folderId]);
+
+  useEffect(() => {
+    router.prefetch("/dashboard");
+  }, [router]);
 
   if (!initialVaultState.valid) {
     return (
