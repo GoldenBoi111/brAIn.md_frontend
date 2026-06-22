@@ -41,7 +41,60 @@ export interface LogoutResponse {
   logged_out: boolean;
 }
 
-type HttpMethod = "GET" | "POST" | "PUT" | "DELETE";
+export interface ApiTokenRecord {
+  token_id: string;
+  tenant_id: string;
+  token_name: string;
+  subject: string;
+  source: string;
+  provider_name: string;
+  created_by: string;
+  oauth_client_id: string;
+  oauth_client_name: string;
+  scopes: string[];
+  read_roots: string[];
+  write_roots: string[];
+  locked_paths: string[];
+  description: string;
+  avatar_url: string;
+  avatar_alt: string;
+  avatar_background: string;
+  created_at: number;
+  updated_at: number;
+  expires_at: number;
+  last_used_at: number | null;
+  revoked_at: number | null;
+}
+
+export interface ListTokensResponse {
+  api_version: string;
+  tenant_id: string;
+  count: number;
+  tokens: ApiTokenRecord[];
+}
+
+export interface TokenCreateResponse {
+  api_version: string;
+  tenant_id: string;
+  token_id: string;
+  token_name: string;
+  token: string;
+}
+
+export interface TokenDetailResponse {
+  api_version: string;
+  tenant_id: string;
+  token: ApiTokenRecord;
+}
+
+export interface TokenDeleteResponse {
+  api_version: string;
+  tenant_id: string;
+  deleted: boolean;
+  token_id: string;
+}
+
+type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 interface RequestOptions {
   query?: Record<string, string | number | boolean | undefined>;
@@ -220,20 +273,24 @@ export const backendApi = {
   } = { path: "." }) =>
     request<Record<string, unknown>>("POST", "/api/vault/reindex", { body }),
 
-  listTokens: () => request<Record<string, unknown>>("GET", "/api/tokens"),
+  listTokens: () => request<ListTokensResponse>("GET", "/api/tokens"),
+
+  getToken: (tokenId: string) =>
+    request<TokenDetailResponse>("GET", withPathParams("/api/tokens/{tokenId}", { tokenId })),
 
   createToken: (body: {
     subject: string;
     tokenName?: string;
     token_name?: string;
-    avatarProvider?: string;
-    avatar_provider?: string;
-    avatarImage?: string;
-    avatar_image?: string;
-    lockedPaths?: string[];
-    locked_paths?: string[];
-    readOnlyPaths?: string[];
-    read_only_paths?: string[];
+    providerName?: string;
+    provider_name?: string;
+    description?: string;
+    avatarUrl?: string;
+    avatar_url?: string;
+    avatarAlt?: string;
+    avatar_alt?: string;
+    avatarBackground?: string;
+    avatar_background?: string;
     scopes?: string[];
     readRoots?: string[];
     read_roots?: string[];
@@ -246,23 +303,61 @@ export const backendApi = {
   } = {
     tokenName: "docs-bot",
     subject: "ui",
+    providerName: "OpenAI",
+    description: "",
+    avatarUrl: "https://openai.com/favicon.ico",
+    avatarAlt: "OpenAI logo",
+    avatarBackground: "#f0fbf4",
     scopes: ["mcp"],
     readRoots: ["docs"],
     writeRoots: ["docs"],
-  }) => request<Record<string, unknown>>("POST", "/api/tokens", { body }),
+  }) => request<TokenCreateResponse>("POST", "/api/tokens", { body }),
+
+  updateToken: (
+    tokenId: string,
+    body: {
+      tokenName?: string;
+      token_name?: string;
+      subject?: string;
+      providerName?: string;
+      provider_name?: string;
+      description?: string;
+      avatarUrl?: string;
+      avatar_url?: string;
+      avatarAlt?: string;
+      avatar_alt?: string;
+      avatarBackground?: string;
+      avatar_background?: string;
+      scopes?: string[];
+      readRoots?: string[];
+      read_roots?: string[];
+      writeRoots?: string[];
+      write_roots?: string[];
+      issuer?: string;
+      audience?: string;
+      revoked?: boolean;
+    } = {},
+  ) =>
+    request<TokenDetailResponse>("PATCH", withPathParams("/api/tokens/{tokenId}", { tokenId }), {
+      body,
+    }),
+
+  deleteToken: (tokenId: string) =>
+    request<TokenDeleteResponse>("DELETE", withPathParams("/api/tokens/{tokenId}", { tokenId })),
 
   createMcpToken: (body: {
     subject: string;
     tokenName?: string;
     token_name?: string;
-    avatarProvider?: string;
-    avatar_provider?: string;
-    avatarImage?: string;
-    avatar_image?: string;
-    lockedPaths?: string[];
-    locked_paths?: string[];
-    readOnlyPaths?: string[];
-    read_only_paths?: string[];
+    providerName?: string;
+    provider_name?: string;
+    description?: string;
+    avatarUrl?: string;
+    avatar_url?: string;
+    avatarAlt?: string;
+    avatar_alt?: string;
+    avatarBackground?: string;
+    avatar_background?: string;
     scopes?: string[];
     readRoots?: string[];
     read_roots?: string[];
@@ -275,10 +370,15 @@ export const backendApi = {
   } = {
     tokenName: "docs-bot",
     subject: "ui",
+    providerName: "OpenAI",
+    description: "",
+    avatarUrl: "https://openai.com/favicon.ico",
+    avatarAlt: "OpenAI logo",
+    avatarBackground: "#f0fbf4",
     scopes: ["mcp"],
     readRoots: ["docs"],
     writeRoots: ["docs"],
-  }) => request<Record<string, unknown>>("POST", "/api/mcp/token", { body }),
+  }) => request<TokenCreateResponse>("POST", "/api/mcp/token", { body }),
 
   getTokenLocks: (
     tokenId: string = FILLER_TOKEN_ID,

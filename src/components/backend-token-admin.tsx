@@ -8,9 +8,12 @@ import {
   PenLine,
   Plus,
   RefreshCw,
+  ShieldAlert,
   Trash2,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+
+import { backendApi, type ApiTokenRecord } from "@/lib/backend-api";
 
 type TokenProviderId =
   | "openai"
@@ -20,20 +23,6 @@ type TokenProviderId =
   | "cohere"
   | "perplexity"
   | "custom";
-
-type TokenRecord = {
-  id: string;
-  name: string;
-  provider: TokenProviderId;
-  providerName: string;
-  providerUrl: string;
-  providerImageUrl: string;
-  token: string;
-  createdAt: string;
-  refreshedAt: string;
-  lockedPaths: string[];
-  readOnlyPaths: string[];
-};
 
 type ProviderOption = {
   id: TokenProviderId;
@@ -45,7 +34,42 @@ type ProviderOption = {
   sourceUrl: string;
 };
 
-const STORAGE_KEY = "brain-md-backend-tokens";
+type TokenRecord = {
+  tokenId: string;
+  tokenName: string;
+  subject: string;
+  source: string;
+  providerName: string;
+  createdBy: string;
+  oauthClientId: string;
+  oauthClientName: string;
+  description: string;
+  avatarUrl: string;
+  avatarAlt: string;
+  avatarBackground: string;
+  scopes: string[];
+  readRoots: string[];
+  writeRoots: string[];
+  lockedPaths: string[];
+  createdAt: number;
+  updatedAt: number;
+  expiresAt: number;
+  lastUsedAt: number | null;
+  revokedAt: number | null;
+};
+
+type TokenDraft = {
+  tokenName: string;
+  subject: string;
+  providerName: string;
+  description: string;
+  avatarUrl: string;
+  avatarAlt: string;
+  avatarBackground: string;
+  scopesText: string;
+  readRootsText: string;
+  writeRootsText: string;
+};
 
 const PROVIDERS: ProviderOption[] = [
   {
@@ -113,137 +137,37 @@ const PROVIDERS: ProviderOption[] = [
   },
 ];
 
-function getProviderDefaults(provider: TokenProviderId): ProviderOption {
-  return PROVIDERS.find((option) => option.id === provider) ?? PROVIDERS[0];
+const DEFAULT_PROVIDER = PROVIDERS[0];
+const DEFAULT_CREATE_DRAFT = defaultCreateDraft();
+
+function getProviderByName(providerName: string): ProviderOption {
+  const lower = providerName.trim().toLowerCase();
+  return (
+    PROVIDERS.find((provider) => provider.name.toLowerCase() === lower) ??
+    PROVIDERS.find((provider) => provider.id === "custom") ??
+    DEFAULT_PROVIDER
+  );
 }
 
-const DEFAULT_TOKENS: TokenRecord[] = [
-  {
-    id: "token-docs-bot",
-    name: "Docs bot",
-    provider: "openai",
-    providerName: "OpenAI",
-    providerUrl: "https://openai.com",
-    providerImageUrl: "https://openai.com/favicon.ico",
-    token: "tk_openai_docs_bot_seed",
-    createdAt: "2026-06-21T12:00:00.000Z",
-    refreshedAt: "2026-06-21T12:00:00.000Z",
-    lockedPaths: [],
-    readOnlyPaths: [],
-  },
-  {
-    id: "token-research-relay",
-    name: "Research relay",
-    provider: "anthropic",
-    providerName: "Anthropic",
-    providerUrl: "https://www.anthropic.com",
-    providerImageUrl: "https://www.anthropic.com/favicon.ico",
-    token: "tk_anthropic_relay_seed",
-    createdAt: "2026-06-21T12:00:00.000Z",
-    refreshedAt: "2026-06-21T12:00:00.000Z",
-    lockedPaths: ["Brain Vault / Personal / Goals.md"],
-    readOnlyPaths: [],
-  },
-  {
-    id: "token-vault-sync",
-    name: "Vault sync",
-    provider: "google",
-    providerName: "Google",
-    providerUrl: "https://www.google.com",
-    providerImageUrl: "https://www.google.com/favicon.ico",
-    token: "tk_google_sync_seed",
-    createdAt: "2026-06-21T12:00:00.000Z",
-    refreshedAt: "2026-06-21T12:00:00.000Z",
-    lockedPaths: [],
-    readOnlyPaths: ["Brain Vault / Projects", "Brain Vault / Personal"],
-  },
-];
-
-function getRandomHex(size: number): string {
-  const bytes = new Uint8Array(size);
-
-  if (typeof window !== "undefined" && window.crypto?.getRandomValues) {
-    window.crypto.getRandomValues(bytes);
-  } else {
-    for (let index = 0; index < bytes.length; index += 1) {
-      bytes[index] = Math.floor(Math.random() * 256);
-    }
-  }
-
-  return Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join("");
+function parseList(value: string): string[] {
+  return Array.from(
+    new Set(
+      value
+        .split(/[\n,]/g)
+        .map((item) => item.trim())
+        .filter(Boolean),
+    ),
+  ).sort();
 }
 
-function normalizeStringArray(values: unknown): string[] {
-  if (!Array.isArray(values)) return [];
-  return Array.from(new Set(values.filter((value): value is string => typeof value === "string"))).sort();
+function joinList(values: string[]): string {
+  return values.join(", ");
 }
 
-function normalizeTokenRecord(record: Partial<TokenRecord>): TokenRecord {
-  const provider = getProviderDefaults((record.provider ?? "openai") as TokenProviderId);
-
-  return {
-    id: record.id ?? `token-${getRandomHex(6)}`,
-    name: record.name ?? "Untitled token",
-    provider: provider.id,
-    providerName: record.providerName ?? provider.name,
-    providerUrl: record.providerUrl ?? provider.sourceUrl,
-    providerImageUrl: record.providerImageUrl ?? provider.imageUrl,
-    token: record.token ?? `tk_${getRandomHex(18)}`,
-    createdAt: record.createdAt ?? new Date().toISOString(),
-    refreshedAt: record.refreshedAt ?? new Date().toISOString(),
-    lockedPaths: normalizeStringArray(record.lockedPaths),
-    readOnlyPaths: normalizeStringArray(record.readOnlyPaths),
-  };
-}
-
-function createTokenRecord(
-  name: string,
-  providerId: TokenProviderId,
-  providerName: string,
-  providerUrl: string,
-  providerImageUrl: string,
-): TokenRecord {
-  const provider = getProviderDefaults(providerId);
-  const now = new Date().toISOString();
-
-  return {
-    id: `token-${getRandomHex(6)}`,
-    name,
-    provider: provider.id,
-    providerName,
-    providerUrl,
-    providerImageUrl: providerImageUrl || provider.imageUrl,
-    token: `tk_${getRandomHex(18)}`,
-    createdAt: now,
-    refreshedAt: now,
-    lockedPaths: [],
-    readOnlyPaths: [],
-  };
-}
-
-function loadTokens(): TokenRecord[] {
-  if (typeof window === "undefined") return DEFAULT_TOKENS.map(normalizeTokenRecord);
-
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return DEFAULT_TOKENS.map(normalizeTokenRecord);
-
-    const parsed = JSON.parse(raw) as Partial<TokenRecord>[];
-    return parsed.length ? parsed.map(normalizeTokenRecord) : DEFAULT_TOKENS.map(normalizeTokenRecord);
-  } catch {
-    return DEFAULT_TOKENS.map(normalizeTokenRecord);
-  }
-}
-
-function formatTokenPreview(token: string): string {
-  if (token.length <= 12) return token;
-  return `${token.slice(0, 6)}...${token.slice(-4)}`;
-}
-
-function formatDate(value: string): string {
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return "Just now";
-
+function formatDate(seconds: number | null): string {
+  if (!seconds) return "Never";
+  const parsed = new Date(seconds * 1000);
+  if (Number.isNaN(parsed.getTime())) return "Never";
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
@@ -253,68 +177,103 @@ function formatDate(value: string): string {
   }).format(parsed);
 }
 
-function providerAvatar(provider: ProviderOption): string {
-  return provider.imageUrl;
+function formatTokenPreview(tokenId: string): string {
+  if (tokenId.length <= 12) return tokenId;
+  return `${tokenId.slice(0, 6)}...${tokenId.slice(-4)}`;
 }
 
-function PermissionModeBadge({
-  mode,
-  count,
-}: {
-  mode: "locked" | "readOnly";
-  count: number;
-}) {
-  return (
-    <span className={clsx("backend-token-admin__permission-pill", mode === "locked" && "backend-token-admin__permission-pill--locked")}>
-      {mode === "locked" ? <Lock className="size-3" /> : <EyeOff className="size-3" />}
-      <span>{mode === "locked" ? "Locked" : "Read only"}</span>
-      <strong>{count}</strong>
-    </span>
-  );
+function normalizeTokenRecord(record: ApiTokenRecord): TokenRecord {
+  return {
+    tokenId: record.token_id,
+    tokenName: record.token_name,
+    subject: record.subject,
+    source: record.source,
+    providerName: record.provider_name,
+    createdBy: record.created_by,
+    oauthClientId: record.oauth_client_id,
+    oauthClientName: record.oauth_client_name,
+    description: record.description,
+    avatarUrl: record.avatar_url,
+    avatarAlt: record.avatar_alt,
+    avatarBackground: record.avatar_background,
+    scopes: Array.from(new Set(record.scopes.map((value) => String(value)))).sort(),
+    readRoots: Array.from(new Set(record.read_roots.map((value) => String(value)))).sort(),
+    writeRoots: Array.from(new Set(record.write_roots.map((value) => String(value)))).sort(),
+    lockedPaths: Array.from(new Set(record.locked_paths.map((value) => String(value)))).sort(),
+    createdAt: Number(record.created_at ?? 0),
+    updatedAt: Number(record.updated_at ?? 0),
+    expiresAt: Number(record.expires_at ?? 0),
+    lastUsedAt: record.last_used_at === null ? null : Number(record.last_used_at ?? 0),
+    revokedAt: record.revoked_at === null ? null : Number(record.revoked_at ?? 0),
+  };
+}
+
+function draftFromToken(token: TokenRecord): TokenDraft {
+  return {
+    tokenName: token.tokenName,
+    subject: token.subject,
+    providerName: token.providerName,
+    description: token.description,
+    avatarUrl: token.avatarUrl,
+    avatarAlt: token.avatarAlt,
+    avatarBackground: token.avatarBackground,
+    scopesText: joinList(token.scopes),
+    readRootsText: joinList(token.readRoots),
+    writeRootsText: joinList(token.writeRoots),
+  };
+}
+
+function defaultCreateDraft(): TokenDraft {
+  const provider = DEFAULT_PROVIDER;
+  return {
+    tokenName: "Design relay",
+    subject: "ui",
+    providerName: provider.name,
+    description: "",
+    avatarUrl: provider.imageUrl,
+    avatarAlt: `${provider.name} logo`,
+    avatarBackground: provider.background,
+    scopesText: "mcp",
+    readRootsText: "docs",
+    writeRootsText: "docs",
+  };
 }
 
 function ProviderBadge({
   provider,
   imageUrl,
+  background,
+  alt,
 }: {
   provider: ProviderOption;
   imageUrl?: string;
+  background?: string;
+  alt?: string;
 }) {
   const [failed, setFailed] = useState(false);
-  const resolvedImageUrl = provider.id === "custom" ? imageUrl?.trim() ?? "" : providerAvatar(provider);
+  const resolvedImageUrl = imageUrl?.trim() || provider.imageUrl;
+  const resolvedBackground = background?.trim() || provider.background;
 
   useEffect(() => {
     setFailed(false);
   }, [resolvedImageUrl]);
 
-  if (provider.id === "custom") {
-    if (resolvedImageUrl && !failed) {
-      return (
-        <img
-          src={resolvedImageUrl}
-          alt={`${provider.name} logo`}
-          onError={() => setFailed(true)}
-          loading="lazy"
-          referrerPolicy="no-referrer"
-        />
-      );
-    }
-
+  if (provider.id === "custom" && !resolvedImageUrl && !failed) {
     return (
       <span
         className="backend-token-admin__provider-fallback backend-token-admin__provider-fallback--custom"
-        style={{ background: provider.background, color: provider.accent }}
+        style={{ background: resolvedBackground, color: provider.accent }}
       >
         {provider.name}
       </span>
     );
   }
 
-  if (failed) {
+  if (!resolvedImageUrl || failed) {
     return (
       <span
         className="backend-token-admin__provider-fallback"
-        style={{ background: provider.background, color: provider.accent }}
+        style={{ background: resolvedBackground, color: provider.accent }}
       >
         {provider.initials}
       </span>
@@ -324,7 +283,7 @@ function ProviderBadge({
   return (
     <img
       src={resolvedImageUrl}
-      alt={`${provider.name} logo`}
+      alt={alt || `${provider.name} logo`}
       onError={() => setFailed(true)}
       loading="lazy"
       referrerPolicy="no-referrer"
@@ -332,96 +291,266 @@ function ProviderBadge({
   );
 }
 
+function PermissionModeBadge({
+  mode,
+  count,
+}: {
+  mode: "locked" | "write";
+  count: number;
+}) {
+  return (
+    <span
+      className={clsx(
+        "backend-token-admin__permission-pill",
+        mode === "locked" && "backend-token-admin__permission-pill--locked",
+      )}
+    >
+      {mode === "locked" ? <Lock className="size-3" /> : <EyeOff className="size-3" />}
+      <span>{mode === "locked" ? "Locked roots" : "Write roots"}</span>
+      <strong>{count}</strong>
+    </span>
+  );
+}
+
+function TokenStatus({
+  revokedAt,
+  expiresAt,
+}: {
+  revokedAt: number | null;
+  expiresAt: number;
+}) {
+  if (revokedAt) {
+    return (
+      <span className="backend-token-admin__token-status-pill backend-token-admin__token-status-pill--active">
+        <ShieldAlert className="size-3" />
+        Revoked
+      </span>
+    );
+  }
+
+  if (expiresAt * 1000 < Date.now()) {
+    return <span className="backend-token-admin__token-status-pill">Expired</span>;
+  }
+
+  return (
+    <span className="backend-token-admin__token-status-pill backend-token-admin__token-status-pill--active">
+      Active
+    </span>
+  );
+}
+
 export function BackendTokenAdmin() {
-  const [hydrated, setHydrated] = useState(false);
-  const [tokens, setTokens] = useState<TokenRecord[]>(DEFAULT_TOKENS.map(normalizeTokenRecord));
-  const [draftName, setDraftName] = useState("Design relay");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [tokens, setTokens] = useState<TokenRecord[]>([]);
+  const [drafts, setDrafts] = useState<Record<string, TokenDraft>>({});
+  const [savingTokenIds, setSavingTokenIds] = useState<string[]>([]);
+  const [deletingTokenIds, setDeletingTokenIds] = useState<string[]>([]);
+  const [freshToken, setFreshToken] = useState<{ tokenId: string; tokenName: string; token: string } | null>(null);
+  const [copiedSecret, setCopiedSecret] = useState(false);
+
+  const [draftName, setDraftName] = useState(DEFAULT_CREATE_DRAFT.tokenName);
+  const [draftSubject, setDraftSubject] = useState(DEFAULT_CREATE_DRAFT.subject);
   const [draftProvider, setDraftProvider] = useState<TokenProviderId>("mistral");
-  const [draftProviderName, setDraftProviderName] = useState(getProviderDefaults("mistral").name);
-  const [draftProviderUrl, setDraftProviderUrl] = useState(getProviderDefaults("mistral").sourceUrl);
-  const [draftProviderImageUrl, setDraftProviderImageUrl] = useState(getProviderDefaults("mistral").imageUrl);
-  const [copiedTokenId, setCopiedTokenId] = useState<string | null>(null);
-
-  useEffect(() => {
-    setTokens(loadTokens());
-    setHydrated(true);
-  }, []);
-
-  useEffect(() => {
-    if (!hydrated || typeof window === "undefined") return;
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(tokens));
-  }, [hydrated, tokens]);
+  const [draftProviderName, setDraftProviderName] = useState(DEFAULT_CREATE_DRAFT.providerName);
+  const [draftDescription, setDraftDescription] = useState(DEFAULT_CREATE_DRAFT.description);
+  const [draftAvatarUrl, setDraftAvatarUrl] = useState(DEFAULT_CREATE_DRAFT.avatarUrl);
+  const [draftAvatarAlt, setDraftAvatarAlt] = useState(DEFAULT_CREATE_DRAFT.avatarAlt);
+  const [draftAvatarBackground, setDraftAvatarBackground] = useState(DEFAULT_CREATE_DRAFT.avatarBackground);
+  const [draftScopesText, setDraftScopesText] = useState(DEFAULT_CREATE_DRAFT.scopesText);
+  const [draftReadRootsText, setDraftReadRootsText] = useState(DEFAULT_CREATE_DRAFT.readRootsText);
+  const [draftWriteRootsText, setDraftWriteRootsText] = useState(DEFAULT_CREATE_DRAFT.writeRootsText);
 
   const providerLookup = useMemo(
-    () =>
-      Object.fromEntries(PROVIDERS.map((provider) => [provider.id, provider])) as Record<
-        TokenProviderId,
-        ProviderOption
-      >,
+    () => Object.fromEntries(PROVIDERS.map((provider) => [provider.id, provider])) as Record<TokenProviderId, ProviderOption>,
     [],
   );
 
-  const handleCreateToken = () => {
-    const trimmedName = draftName.trim() || "Untitled token";
-    const provider = providerLookup[draftProvider] ?? PROVIDERS[0];
-    const nextToken = createTokenRecord(
-      trimmedName,
-      draftProvider,
-      draftProviderName.trim() || provider.name,
-      draftProviderUrl.trim() || provider.sourceUrl,
-      draftProviderImageUrl.trim() || provider.imageUrl,
-    );
-    setTokens((current) => [nextToken, ...current]);
-    setDraftName("");
-    setDraftProvider("openai");
-    setDraftProviderName(providerLookup.openai.name);
-    setDraftProviderUrl(providerLookup.openai.sourceUrl);
-    setDraftProviderImageUrl(providerLookup.openai.imageUrl);
-  };
+  const loadTokens = async () => {
+    setLoading(true);
+    setError(null);
 
-  const handleUpdateTokenField = (
-    tokenId: string,
-    field: "name" | "providerName" | "providerUrl" | "providerImageUrl",
-    value: string,
-  ) => {
-    setTokens((current) =>
-      current.map((token) => (token.id === tokenId ? { ...token, [field]: value } : token)),
-    );
-  };
-
-  const handleRefreshToken = (tokenId: string) => {
-    setTokens((current) =>
-      current.map((token) =>
-        token.id === tokenId
-          ? { ...token, token: `tk_${getRandomHex(18)}`, refreshedAt: new Date().toISOString() }
-          : token,
-      ),
-    );
-  };
-
-  const handleDeleteToken = (tokenId: string) => {
-    setTokens((current) => current.filter((token) => token.id !== tokenId));
-    if (copiedTokenId === tokenId) {
-      setCopiedTokenId(null);
+    try {
+      const response = await backendApi.listTokens();
+      const nextTokens = response.tokens.map(normalizeTokenRecord);
+      setTokens(nextTokens);
+      setDrafts(Object.fromEntries(nextTokens.map((token) => [token.tokenId, draftFromToken(token)])));
+    } catch (loadError) {
+      setTokens([]);
+      setDrafts({});
+      setError(loadError instanceof Error ? loadError.message : "Unable to load tokens.");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleCopyToken = async (tokenId: string, tokenValue: string) => {
+  useEffect(() => {
+    void loadTokens();
+  }, []);
+
+  const updateDraft = (tokenId: string, field: keyof TokenDraft, value: string) => {
+    setDrafts((current) => ({
+      ...current,
+      [tokenId]: {
+        ...(current[tokenId] ?? drafts[tokenId] ?? {
+          tokenName: "",
+          subject: "",
+          providerName: "",
+          description: "",
+          avatarUrl: "",
+          avatarAlt: "",
+          avatarBackground: "",
+          scopesText: "",
+          readRootsText: "",
+          writeRootsText: "",
+        }),
+        [field]: value,
+      },
+    }));
+  };
+
+  const handleSelectProvider = (
+    provider: ProviderOption,
+    mode: "create" | "edit",
+    tokenId?: string,
+  ) => {
+    if (mode === "create") {
+      setDraftProvider(provider.id);
+      setDraftProviderName(provider.name);
+      setDraftAvatarUrl(provider.imageUrl);
+      setDraftAvatarAlt(`${provider.name} logo`);
+      setDraftAvatarBackground(provider.background);
+      return;
+    }
+
+    if (!tokenId) return;
+    updateDraft(tokenId, "providerName", provider.name);
+    updateDraft(tokenId, "avatarUrl", provider.imageUrl);
+    updateDraft(tokenId, "avatarAlt", `${provider.name} logo`);
+    updateDraft(tokenId, "avatarBackground", provider.background);
+  };
+
+  const handleCreateToken = async () => {
+    setError(null);
+    const provider = providerLookup[draftProvider] ?? DEFAULT_PROVIDER;
+    const body = {
+      tokenName: draftName.trim() || "Untitled token",
+      subject: draftSubject.trim() || "ui",
+      providerName: draftProviderName.trim() || provider.name,
+      description: draftDescription.trim(),
+      avatarUrl: draftAvatarUrl.trim() || provider.imageUrl,
+      avatarAlt: draftAvatarAlt.trim() || `${provider.name} logo`,
+      avatarBackground: draftAvatarBackground.trim() || provider.background,
+      scopes: parseList(draftScopesText).length ? parseList(draftScopesText) : ["mcp"],
+      readRoots: parseList(draftReadRootsText),
+      writeRoots: parseList(draftWriteRootsText),
+    };
+
     try {
-      await navigator.clipboard.writeText(tokenValue);
-      setCopiedTokenId(tokenId);
-      window.setTimeout(() => setCopiedTokenId(null), 1200);
+      const response = await backendApi.createToken(body);
+      setFreshToken({
+        tokenId: response.token_id,
+        tokenName: response.token_name,
+        token: response.token,
+      });
+      await loadTokens();
+      setDraftName("Design relay");
+      setDraftSubject("ui");
+      setDraftProvider("mistral");
+      setDraftProviderName(providerLookup.mistral.name);
+      setDraftDescription("");
+      setDraftAvatarUrl(providerLookup.mistral.imageUrl);
+      setDraftAvatarAlt(`${providerLookup.mistral.name} logo`);
+      setDraftAvatarBackground(providerLookup.mistral.background);
+      setDraftScopesText("mcp");
+      setDraftReadRootsText("docs");
+      setDraftWriteRootsText("docs");
+    } catch (createError) {
+      setError(createError instanceof Error ? createError.message : "Unable to create token.");
+    }
+  };
+
+  const handleSaveToken = async (tokenId: string) => {
+    const draft = drafts[tokenId];
+    if (!draft) return;
+
+    setSavingTokenIds((current) => [...current, tokenId]);
+    setError(null);
+
+    try {
+      const response = await backendApi.updateToken(tokenId, {
+        tokenName: draft.tokenName.trim() || "Untitled token",
+        subject: draft.subject.trim() || "ui",
+        providerName: draft.providerName.trim() || DEFAULT_PROVIDER.name,
+        description: draft.description.trim(),
+        avatarUrl: draft.avatarUrl.trim(),
+        avatarAlt: draft.avatarAlt.trim(),
+        avatarBackground: draft.avatarBackground.trim(),
+        scopes: parseList(draft.scopesText),
+        readRoots: parseList(draft.readRootsText),
+        writeRoots: parseList(draft.writeRootsText),
+      });
+
+      const updated = normalizeTokenRecord(response.token);
+      setTokens((current) => current.map((token) => (token.tokenId === tokenId ? updated : token)));
+      setDrafts((current) => ({
+        ...current,
+        [tokenId]: draftFromToken(updated),
+      }));
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Unable to save token.");
+    } finally {
+      setSavingTokenIds((current) => current.filter((currentId) => currentId !== tokenId));
+    }
+  };
+
+  const handleRevokeToken = async (tokenId: string) => {
+    setSavingTokenIds((current) => [...current, tokenId]);
+    setError(null);
+
+    try {
+      const response = await backendApi.updateToken(tokenId, { revoked: true });
+      const updated = normalizeTokenRecord(response.token);
+      setTokens((current) => current.map((token) => (token.tokenId === tokenId ? updated : token)));
+      setDrafts((current) => ({
+        ...current,
+        [tokenId]: draftFromToken(updated),
+      }));
+    } catch (revokeError) {
+      setError(revokeError instanceof Error ? revokeError.message : "Unable to revoke token.");
+    } finally {
+      setSavingTokenIds((current) => current.filter((currentId) => currentId !== tokenId));
+    }
+  };
+
+  const handleDeleteToken = async (tokenId: string) => {
+    setDeletingTokenIds((current) => [...current, tokenId]);
+    setError(null);
+
+    try {
+      await backendApi.deleteToken(tokenId);
+      setTokens((current) => current.filter((token) => token.tokenId !== tokenId));
+      setDrafts((current) => {
+        const next = { ...current };
+        delete next[tokenId];
+        return next;
+      });
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "Unable to delete token.");
+    } finally {
+      setDeletingTokenIds((current) => current.filter((currentId) => currentId !== tokenId));
+    }
+  };
+
+  const handleCopySecret = async () => {
+    if (!freshToken?.token) return;
+    try {
+      await navigator.clipboard.writeText(freshToken.token);
+      setCopiedSecret(true);
+      window.setTimeout(() => setCopiedSecret(false), 1200);
     } catch {
       // Ignore clipboard failures in the local prototype.
     }
-  };
-
-  const handleSelectProvider = (provider: TokenProviderId) => {
-    const selected = providerLookup[provider] ?? PROVIDERS[0];
-    setDraftProvider(provider);
-    setDraftProviderName(selected.name);
-    setDraftProviderUrl(selected.sourceUrl);
-    setDraftProviderImageUrl(selected.imageUrl);
   };
 
   return (
@@ -431,8 +560,8 @@ export function BackendTokenAdmin() {
           <p className="backend-page__eyebrow">Token administration</p>
           <h3 className="backend-token-admin__title">Generate, rename, refresh, and retire tokens.</h3>
           <p className="backend-token-admin__lede">
-            Keep the controls aligned with the secure website API. Tokens can be named, refreshed,
-            deleted, tagged with a visual identity, and assigned token-scoped vault rules.
+            This page now pulls directly from the website API. Token metadata, provider labels,
+            avatar choices, and vault access roots are read from and written back to the server.
           </p>
         </div>
 
@@ -458,6 +587,25 @@ export function BackendTokenAdmin() {
           />
         </label>
 
+        <div className="backend-token-admin__field-grid">
+          <label className="backend-token-admin__field backend-token-admin__field--compact">
+            <span>Subject</span>
+            <input
+              value={draftSubject}
+              onChange={(event) => setDraftSubject(event.target.value)}
+              placeholder="ui"
+            />
+          </label>
+          <label className="backend-token-admin__field backend-token-admin__field--compact">
+            <span>Provider name</span>
+            <input
+              value={draftProviderName}
+              onChange={(event) => setDraftProviderName(event.target.value)}
+              placeholder="Perplexity"
+            />
+          </label>
+        </div>
+
         <div className="backend-token-admin__provider-picker">
           <div className="backend-token-admin__provider-label">
             <span>Visual identity</span>
@@ -475,7 +623,7 @@ export function BackendTokenAdmin() {
                     "backend-token-admin__provider-card",
                     selected && "backend-token-admin__provider-card--selected",
                   )}
-                  onClick={() => handleSelectProvider(provider.id)}
+                  onClick={() => handleSelectProvider(provider, "create")}
                 >
                   <ProviderBadge provider={provider} />
                   <span>{provider.name}</span>
@@ -485,32 +633,66 @@ export function BackendTokenAdmin() {
           </div>
           <div className="backend-token-admin__field-grid">
             <label className="backend-token-admin__field backend-token-admin__field--compact">
-              <span>Provider name</span>
+              <span>Avatar URL</span>
               <input
-                value={draftProviderName}
-                onChange={(event) => setDraftProviderName(event.target.value)}
-                placeholder="Perplexity"
+                value={draftAvatarUrl}
+                onChange={(event) => setDraftAvatarUrl(event.target.value)}
+                placeholder="https://openai.com/favicon.ico"
               />
             </label>
             <label className="backend-token-admin__field backend-token-admin__field--compact">
-              <span>Provider URL</span>
+              <span>Avatar alt text</span>
               <input
-                value={draftProviderUrl}
-                onChange={(event) => setDraftProviderUrl(event.target.value)}
-                placeholder="https://www.perplexity.ai"
+                value={draftAvatarAlt}
+                onChange={(event) => setDraftAvatarAlt(event.target.value)}
+                placeholder="OpenAI logo"
               />
             </label>
-            {draftProvider === "custom" ? (
-              <label className="backend-token-admin__field backend-token-admin__field--compact">
-                <span>Identity image URL</span>
-                <input
-                  value={draftProviderImageUrl}
-                  onChange={(event) => setDraftProviderImageUrl(event.target.value)}
-                  placeholder="https://example.com/logo.png"
-                />
-              </label>
-            ) : null}
+            <label className="backend-token-admin__field backend-token-admin__field--compact">
+              <span>Avatar background</span>
+              <input
+                value={draftAvatarBackground}
+                onChange={(event) => setDraftAvatarBackground(event.target.value)}
+                placeholder="#f0fbf4"
+              />
+            </label>
           </div>
+        </div>
+
+        <label className="backend-token-admin__field">
+          <span>Description</span>
+          <input
+            value={draftDescription}
+            onChange={(event) => setDraftDescription(event.target.value)}
+            placeholder="Used for Claude web connections"
+          />
+        </label>
+
+        <div className="backend-token-admin__field-grid">
+          <label className="backend-token-admin__field backend-token-admin__field--compact">
+            <span>Scopes</span>
+            <input
+              value={draftScopesText}
+              onChange={(event) => setDraftScopesText(event.target.value)}
+              placeholder="mcp"
+            />
+          </label>
+          <label className="backend-token-admin__field backend-token-admin__field--compact">
+            <span>Read roots</span>
+            <input
+              value={draftReadRootsText}
+              onChange={(event) => setDraftReadRootsText(event.target.value)}
+              placeholder="docs, notes"
+            />
+          </label>
+          <label className="backend-token-admin__field backend-token-admin__field--compact">
+            <span>Write roots</span>
+            <input
+              value={draftWriteRootsText}
+              onChange={(event) => setDraftWriteRootsText(event.target.value)}
+              placeholder="docs, notes"
+            />
+          </label>
         </div>
 
         <button type="button" className="backend-token-admin__create" onClick={handleCreateToken}>
@@ -519,76 +701,197 @@ export function BackendTokenAdmin() {
         </button>
       </div>
 
+      {freshToken ? (
+        <div className="backend-token-admin__notice">
+          <div>
+            <p className="backend-token-admin__notice-label">New token created</p>
+            <p className="backend-token-admin__notice-copy">
+              {freshToken.tokenName} was created on the API. The secret is only shown once.
+            </p>
+          </div>
+          <div className="backend-token-admin__token-row">
+            <div>
+              <span>Token secret</span>
+              <strong>{formatTokenPreview(freshToken.token)}</strong>
+            </div>
+            <button type="button" className="backend-token-admin__copy" onClick={handleCopySecret}>
+              <Copy className="size-3.5" />
+              <span>{copiedSecret ? "Copied" : "Copy secret"}</span>
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {error ? (
+        <div className="backend-token-admin__notice backend-token-admin__notice--error">
+          <ShieldAlert className="size-4" />
+          <p>{error}</p>
+          <button type="button" className="backend-token-admin__copy" onClick={() => void loadTokens()}>
+            <RefreshCw className="size-3.5" />
+            <span>Retry</span>
+          </button>
+        </div>
+      ) : null}
+
+      <div className="backend-token-admin__toolbar">
+        <p className="backend-token-admin__toolbar-copy">
+          Token data is loaded from <code>/api/tokens</code> and saved back to <code>/api/tokens/{`{tokenId}`}</code>.
+        </p>
+        <button type="button" className="backend-token-admin__copy" onClick={() => void loadTokens()}>
+          <RefreshCw className={clsx("size-3.5", loading && "animate-spin")} />
+          <span>{loading ? "Loading" : "Reload from API"}</span>
+        </button>
+      </div>
+
       <div className="backend-token-admin__list">
+        {loading ? (
+          <article className="backend-token-admin__card">
+            <p className="backend-token-admin__lede">Loading tokens from the API…</p>
+          </article>
+        ) : null}
+
+        {!loading && tokens.length === 0 ? (
+          <article className="backend-token-admin__card">
+            <p className="backend-token-admin__lede">
+              No token records were returned by the API yet. Create one above to seed the tenant.
+            </p>
+          </article>
+        ) : null}
+
         {tokens.map((token) => {
-          const provider = providerLookup[token.provider] ?? PROVIDERS[0];
+          const draft = drafts[token.tokenId] ?? draftFromToken(token);
+          const provider = getProviderByName(draft.providerName || token.providerName);
+          const pendingSave = savingTokenIds.includes(token.tokenId);
+          const pendingDelete = deletingTokenIds.includes(token.tokenId);
 
           return (
-            <article key={token.id} className="backend-token-admin__card">
+            <article key={token.tokenId} className="backend-token-admin__card">
               <div className="backend-token-admin__card-head">
                 <div className="backend-token-admin__identity">
-                  <ProviderBadge provider={provider} imageUrl={token.providerImageUrl} />
+                  <ProviderBadge
+                    provider={provider}
+                    imageUrl={draft.avatarUrl || token.avatarUrl}
+                    background={draft.avatarBackground || token.avatarBackground}
+                    alt={draft.avatarAlt || token.avatarAlt}
+                  />
                   <div>
-                    <p>{token.providerName}</p>
-                    <a href={token.providerUrl} target="_blank" rel="noreferrer">
-                      {token.providerUrl}
-                    </a>
+                    <p>{draft.providerName || token.providerName}</p>
+                    <span>{token.description || "No description yet"}</span>
                   </div>
                 </div>
               </div>
 
-              <label className="backend-token-admin__field backend-token-admin__field--compact">
-                <span>Name</span>
-                <input
-                  value={token.name}
-                  onChange={(event) => handleUpdateTokenField(token.id, "name", event.target.value)}
-                />
-              </label>
-
               <div className="backend-token-admin__field-grid">
+                <label className="backend-token-admin__field backend-token-admin__field--compact">
+                  <span>Name</span>
+                  <input
+                    value={draft.tokenName}
+                    onChange={(event) => updateDraft(token.tokenId, "tokenName", event.target.value)}
+                  />
+                </label>
                 <label className="backend-token-admin__field backend-token-admin__field--compact">
                   <span>Provider name</span>
                   <input
-                    value={token.providerName}
-                    onChange={(event) =>
-                      handleUpdateTokenField(token.id, "providerName", event.target.value)
-                    }
+                    value={draft.providerName}
+                    onChange={(event) => updateDraft(token.tokenId, "providerName", event.target.value)}
                   />
                 </label>
                 <label className="backend-token-admin__field backend-token-admin__field--compact">
-                  <span>Provider URL</span>
+                  <span>Description</span>
                   <input
-                    value={token.providerUrl}
-                    onChange={(event) =>
-                      handleUpdateTokenField(token.id, "providerUrl", event.target.value)
-                    }
+                    value={draft.description}
+                    onChange={(event) => updateDraft(token.tokenId, "description", event.target.value)}
                   />
                 </label>
-                {token.provider === "custom" ? (
-                  <label className="backend-token-admin__field backend-token-admin__field--compact">
-                    <span>Identity image URL</span>
-                    <input
-                      value={token.providerImageUrl}
-                      onChange={(event) =>
-                        handleUpdateTokenField(token.id, "providerImageUrl", event.target.value)
-                      }
-                    />
-                  </label>
-                ) : null}
+                <label className="backend-token-admin__field backend-token-admin__field--compact">
+                  <span>Subject</span>
+                  <input
+                    value={draft.subject}
+                    onChange={(event) => updateDraft(token.tokenId, "subject", event.target.value)}
+                  />
+                </label>
+                <label className="backend-token-admin__field backend-token-admin__field--compact">
+                  <span>Avatar URL</span>
+                  <input
+                    value={draft.avatarUrl}
+                    onChange={(event) => updateDraft(token.tokenId, "avatarUrl", event.target.value)}
+                  />
+                </label>
+                <label className="backend-token-admin__field backend-token-admin__field--compact">
+                  <span>Avatar alt text</span>
+                  <input
+                    value={draft.avatarAlt}
+                    onChange={(event) => updateDraft(token.tokenId, "avatarAlt", event.target.value)}
+                  />
+                </label>
+                <label className="backend-token-admin__field backend-token-admin__field--compact">
+                  <span>Avatar background</span>
+                  <input
+                    value={draft.avatarBackground}
+                    onChange={(event) => updateDraft(token.tokenId, "avatarBackground", event.target.value)}
+                  />
+                </label>
+                <label className="backend-token-admin__field backend-token-admin__field--compact">
+                  <span>Scopes</span>
+                  <input
+                    value={draft.scopesText}
+                    onChange={(event) => updateDraft(token.tokenId, "scopesText", event.target.value)}
+                  />
+                </label>
+                <label className="backend-token-admin__field backend-token-admin__field--compact">
+                  <span>Read roots</span>
+                  <input
+                    value={draft.readRootsText}
+                    onChange={(event) => updateDraft(token.tokenId, "readRootsText", event.target.value)}
+                  />
+                </label>
+                <label className="backend-token-admin__field backend-token-admin__field--compact">
+                  <span>Write roots</span>
+                  <input
+                    value={draft.writeRootsText}
+                    onChange={(event) => updateDraft(token.tokenId, "writeRootsText", event.target.value)}
+                  />
+                </label>
+              </div>
+
+              <div className="backend-token-admin__provider-grid backend-token-admin__provider-grid--compact">
+                {PROVIDERS.map((providerOption) => {
+                  const selected = providerOption.name.toLowerCase() === draft.providerName.trim().toLowerCase();
+                  return (
+                    <button
+                      key={`${token.tokenId}-${providerOption.id}`}
+                      type="button"
+                      className={clsx(
+                        "backend-token-admin__provider-card backend-token-admin__provider-card--compact",
+                        selected && "backend-token-admin__provider-card--selected",
+                      )}
+                      onClick={() => handleSelectProvider(providerOption, "edit", token.tokenId)}
+                    >
+                      <ProviderBadge provider={providerOption} />
+                      <span>{providerOption.name}</span>
+                    </button>
+                  );
+                })}
               </div>
 
               <div className="backend-token-admin__token-row">
                 <div>
-                  <span>Token preview</span>
-                  <strong>{formatTokenPreview(token.token)}</strong>
+                  <span>Token ID</span>
+                  <strong>{formatTokenPreview(token.tokenId)}</strong>
                 </div>
                 <button
                   type="button"
                   className="backend-token-admin__copy"
-                  onClick={() => handleCopyToken(token.id, token.token)}
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(token.tokenId);
+                    } catch {
+                      // Ignore clipboard failures in the local prototype.
+                    }
+                  }}
                 >
                   <Copy className="size-3.5" />
-                  <span>{copiedTokenId === token.id ? "Copied" : "Copy"}</span>
+                  <span>Copy ID</span>
                 </button>
               </div>
 
@@ -598,58 +901,36 @@ export function BackendTokenAdmin() {
                   <strong>{formatDate(token.createdAt)}</strong>
                 </div>
                 <div>
-                  <span>Refreshed</span>
-                  <strong>{formatDate(token.refreshedAt)}</strong>
+                  <span>Updated</span>
+                  <strong>{formatDate(token.updatedAt)}</strong>
+                </div>
+                <div>
+                  <span>Expires</span>
+                  <strong>{formatDate(token.expiresAt)}</strong>
+                </div>
+                <div>
+                  <span>Status</span>
+                  <strong><TokenStatus revokedAt={token.revokedAt} expiresAt={token.expiresAt} /></strong>
                 </div>
               </div>
 
               <div className="backend-token-admin__permission-summary">
                 <PermissionModeBadge mode="locked" count={token.lockedPaths.length} />
-                <PermissionModeBadge mode="readOnly" count={token.readOnlyPaths.length} />
+                <PermissionModeBadge mode="write" count={token.writeRoots.length} />
               </div>
 
               <div className="backend-token-admin__permission-chips">
                 {token.lockedPaths.slice(0, 2).map((path) => (
-                  <span key={`${token.id}-lock-${path}`} className="backend-token-admin__permission-chip">
+                  <span key={`${token.tokenId}-lock-${path}`} className="backend-token-admin__permission-chip">
                     <Lock className="size-3" />
                     {path}
                   </span>
                 ))}
-                {token.readOnlyPaths.slice(0, 2).map((path) => (
-                  <span key={`${token.id}-read-${path}`} className="backend-token-admin__permission-chip">
+                {token.readRoots.slice(0, 2).map((path) => (
+                  <span key={`${token.tokenId}-read-${path}`} className="backend-token-admin__permission-chip">
                     <EyeOff className="size-3" />
                     {path}
                   </span>
-                ))}
-              </div>
-
-              <div className="backend-token-admin__provider-grid backend-token-admin__provider-grid--compact">
-                {PROVIDERS.map((providerOption) => (
-                  <button
-                    key={`${token.id}-${providerOption.id}`}
-                    type="button"
-                    className={clsx(
-                      "backend-token-admin__provider-card backend-token-admin__provider-card--compact",
-                      token.provider === providerOption.id && "backend-token-admin__provider-card--selected",
-                    )}
-                    onClick={() =>
-                      setTokens((current) =>
-                        current.map((currentToken) =>
-                          currentToken.id === token.id
-                            ? {
-                                ...currentToken,
-                                provider: providerOption.id,
-                                providerName: providerOption.name,
-                                providerUrl: providerOption.sourceUrl,
-                              }
-                            : currentToken,
-                        ),
-                      )
-                    }
-                    >
-                    <ProviderBadge provider={providerOption} />
-                    <span>{providerOption.name}</span>
-                  </button>
                 ))}
               </div>
 
@@ -657,37 +938,35 @@ export function BackendTokenAdmin() {
                 <button
                   type="button"
                   className="backend-token-admin__action"
-                  onClick={() => handleRefreshToken(token.id)}
+                  onClick={() => void handleSaveToken(token.tokenId)}
+                  disabled={pendingSave}
                 >
-                  <RefreshCw className="size-4" />
-                  <span>Refresh</span>
+                  <PenLine className="size-4" />
+                  <span>{pendingSave ? "Saving" : "Save"}</span>
                 </button>
                 <button
                   type="button"
                   className="backend-token-admin__action"
-                  onClick={() => handleDeleteToken(token.id)}
+                  onClick={() => void handleRevokeToken(token.tokenId)}
+                  disabled={pendingSave || token.revokedAt !== null}
                 >
-                  <Trash2 className="size-4" />
-                  <span>Delete</span>
+                  <ShieldAlert className="size-4" />
+                  <span>{token.revokedAt ? "Revoked" : "Revoke"}</span>
                 </button>
                 <button
                   type="button"
-                  className="backend-token-admin__action backend-token-admin__action--ghost"
-                  onClick={() => {
-                    setDraftProvider(token.provider);
-                    setDraftProviderName(token.providerName);
-                    setDraftProviderUrl(token.providerUrl);
-                  }}
+                  className="backend-token-admin__action"
+                  onClick={() => void handleDeleteToken(token.tokenId)}
+                  disabled={pendingDelete}
                 >
-                  <PenLine className="size-4" />
-                  <span>Reuse identity</span>
+                  <Trash2 className="size-4" />
+                  <span>{pendingDelete ? "Deleting" : "Delete"}</span>
                 </button>
               </div>
             </article>
           );
         })}
       </div>
-
     </section>
   );
 }
