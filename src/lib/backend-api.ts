@@ -2,13 +2,13 @@ function resolveApiBaseUrl(): string {
   const configured = process.env.NEXT_PUBLIC_BACKEND_API_BASE_URL?.trim();
 
   if (!configured) {
-    return "https://mcp.brain-dev.dev";
+    return "https://mcp.brain-md.dev";
   }
 
   try {
     return new URL(configured).toString().replace(/\/$/, "");
   } catch {
-    return "https://mcp.brain-dev.dev";
+    return "https://mcp.brain-md.dev";
   }
 }
 

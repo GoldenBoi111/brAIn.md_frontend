@@ -62,7 +62,7 @@ export function BackendBridge() {
           </div>
           <div className="backend-page__hero-stat">
             <span>Backend URL</span>
-            <strong>mcp.brain-dev.dev</strong>
+            <strong>mcp.brain-md.dev</strong>
           </div>
           <div className="backend-page__hero-stat">
             <span>Transport</span>
