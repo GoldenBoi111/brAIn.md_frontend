@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ArrowRight, Brain, Loader2, Lock, Sparkles } from "lucide-react";
 
-import { setAuthenticated } from "@/lib/auth";
+import { backendApi } from "@/lib/backend-api";
 
 export function LoginForm() {
   const searchParams = useSearchParams();
@@ -29,7 +29,10 @@ export function LoginForm() {
     setIsLoading(true);
 
     try {
-      setAuthenticated(email.trim());
+      await backendApi.login({
+        email: email.trim(),
+        password,
+      });
 
       const nextPath = searchParams?.get("next");
       const destination =
@@ -38,9 +41,9 @@ export function LoginForm() {
           : "/dashboard";
 
       window.location.assign(destination);
-    } catch {
+    } catch (error) {
       setIsLoading(false);
-      setError("Something went wrong. Please try again.");
+      setError(error instanceof Error ? error.message : "Something went wrong. Please try again.");
     }
   };
 
@@ -136,7 +139,7 @@ export function LoginForm() {
           </div>
           <div className="login-card__hint">
             <Lock className="size-4" />
-            <span>Sessions stay local for this prototype, so you can open the app offline.</span>
+            <span>Sessions are handled by the secure website API.</span>
           </div>
         </div>
       </section>

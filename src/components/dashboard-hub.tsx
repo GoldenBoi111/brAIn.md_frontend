@@ -138,7 +138,7 @@ export function DashboardHub() {
     try {
       await backendApi.logout();
     } catch {
-      // Still sign out locally if the API is unreachable.
+      // Continue clearing the browser session if the API is temporarily unavailable.
     }
 
     clearAuthenticatedSession();

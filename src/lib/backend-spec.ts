@@ -18,16 +18,16 @@ export interface BackendSection {
 }
 
 export const BACKEND_NOTES = [
-  "The browser still talks to a secure same-origin bridge route, so there is no cross-origin host to trigger CORS errors.",
-  "In production, set BACKEND_API_BASE_URL to the live website API and keep the UI paths unchanged.",
-  "Development can still fall back to mock payloads if the backend is unavailable.",
+  "The browser talks directly to the live backend API, so the backend must allow the app origin in CORS.",
+  "Set NEXT_PUBLIC_BACKEND_API_BASE_URL to the live website API and keep the UI paths unchanged.",
+  "If the backend is unavailable in development, the app can still fall back to mock payloads.",
 ];
 
 export const BACKEND_SECTIONS: BackendSection[] = [
   {
     id: "core",
     title: "Core",
-    summary: "Discovery and health checks for the backend bridge.",
+    summary: "Discovery and health checks for the live backend.",
     endpoints: [
       {
         method: "GET",

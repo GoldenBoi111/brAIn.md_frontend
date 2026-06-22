@@ -6,6 +6,7 @@ import { ArrowLeft, Brain, Shield, X } from "lucide-react";
 import { BackendTokenAdmin } from "@/components/backend-token-admin";
 import { ThemeToggleButton } from "@/components/theme-toggle-button";
 import { clearAuthenticatedSession } from "@/lib/auth";
+import { backendApi } from "@/lib/backend-api";
 
 export default function TokensPage() {
   return (
@@ -28,9 +29,13 @@ export default function TokensPage() {
           <button
             type="button"
             className="memory-app__icon-button"
-            onClick={() => {
-              clearAuthenticatedSession();
-              window.location.assign("/login");
+            onClick={async () => {
+              try {
+                await backendApi.logout();
+              } finally {
+                clearAuthenticatedSession();
+                window.location.assign("/login");
+              }
             }}
             aria-label="Sign out"
           >

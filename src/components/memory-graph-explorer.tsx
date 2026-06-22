@@ -49,6 +49,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import BrainAnimation from "@/components/brain-animation";
+import { backendApi } from "@/lib/backend-api";
 import { clearAuthenticatedSession } from "@/lib/auth";
 import { ThemeToggleButton } from "@/components/theme-toggle-button";
 import {
@@ -930,9 +931,13 @@ export function MemoryGraphExplorer() {
           <button
             type="button"
             className="memory-app__icon-button"
-            onClick={() => {
-              clearAuthenticatedSession();
-              window.location.assign("/login");
+            onClick={async () => {
+              try {
+                await backendApi.logout();
+              } finally {
+                clearAuthenticatedSession();
+                window.location.assign("/login");
+              }
             }}
             aria-label="Sign out"
           >
