@@ -1,6 +1,18 @@
-export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_BACKEND_API_BASE_URL?.trim() ??
-  "https://mcp.brain-dev.dev";
+function resolveApiBaseUrl(): string {
+  const configured = process.env.NEXT_PUBLIC_BACKEND_API_BASE_URL?.trim();
+
+  if (!configured) {
+    return "https://mcp.brain-dev.dev";
+  }
+
+  try {
+    return new URL(configured).toString().replace(/\/$/, "");
+  } catch {
+    return "https://mcp.brain-dev.dev";
+  }
+}
+
+export const API_BASE_URL = resolveApiBaseUrl();
 
 export const FILLER_FILE_ID = "file-example-id";
 export const FILLER_TOKEN_ID = "token-example-id";
