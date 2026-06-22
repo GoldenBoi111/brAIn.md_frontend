@@ -3,6 +3,8 @@ import type { FileNode } from "@/types/file-tree";
 
 export const ROOT_VAULT_ID = "folder-brain-vault";
 export const ROOT_VAULT_NAME = "Brain Vault";
+const FILE_CONTENT_CACHE_KEY = "brain-md:vault-file-content-cache";
+const FILE_CONTENT_CACHE_TTL_MS = 10 * 60 * 1000;
 
 type ApiTreeNode = {
   name?: string;
@@ -101,6 +103,62 @@ export async function fetchVaultTree(): Promise<FileNode[]> {
 
 export async function fetchVaultFile(fileId: string) {
   return backendApi.getFile(fileId);
+}
+
+type FileContentCache = Record<
+  string,
+  {
+    savedAt: number;
+    content: string;
+  }
+>;
+
+function readFileContentCache(): FileContentCache {
+  if (typeof window === "undefined") return {};
+
+  try {
+    const raw = window.localStorage.getItem(FILE_CONTENT_CACHE_KEY);
+    if (!raw) return {};
+
+    const parsed = JSON.parse(raw) as FileContentCache;
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeFileContentCache(cache: FileContentCache): void {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(FILE_CONTENT_CACHE_KEY, JSON.stringify(cache));
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
+export function readCachedFileContent(fileId: string): string | null {
+  const cache = readFileContentCache();
+  const entry = cache[fileId];
+  if (!entry) return null;
+  if (Date.now() - entry.savedAt > FILE_CONTENT_CACHE_TTL_MS) return null;
+  return entry.content;
+}
+
+export function writeCachedFileContent(fileId: string, content: string): void {
+  const cache = readFileContentCache();
+  cache[fileId] = {
+    savedAt: Date.now(),
+    content,
+  };
+  writeFileContentCache(cache);
+}
+
+export function clearCachedFileContent(fileId: string): void {
+  const cache = readFileContentCache();
+  if (!(fileId in cache)) return;
+  delete cache[fileId];
+  writeFileContentCache(cache);
 }
 
 export function getNodePath(node: FileNode | null | undefined): string {

@@ -20,12 +20,15 @@ import { cn } from "@/lib/utils";
 import { findFileNode, getFirstSelectableFileId, resolveCreateParentId } from "@/lib/vault";
 import {
   ROOT_VAULT_ID,
+  clearCachedFileContent,
   buildChildNamePath,
   createVaultItem,
   deleteVaultItem,
   fetchVaultFile,
+  readCachedFileContent,
   resolveNodePath,
   updateVaultItem,
+  writeCachedFileContent,
 } from "@/lib/vault-api";
 import type { FileNode } from "@/types/file-tree";
 
@@ -107,26 +110,32 @@ export function AppShell({ folderId }: AppShellProps) {
       ? resolveNodePath(fileTree, selectedFileId)
       : null;
 
+  const loadSelectedFileContent = useCallback(async (fileId: string) => {
+    if (fileContents[fileId] !== undefined) return;
+
+    const cachedContent = readCachedFileContent(fileId);
+    if (cachedContent !== null) {
+      setFileContents((current) => ({ ...current, [fileId]: cachedContent }));
+      return;
+    }
+
+    try {
+      const response = await fetchVaultFile(fileId);
+      const content =
+        typeof response === "object" && response !== null && "content" in response
+          ? String((response as { content?: unknown }).content ?? "")
+          : "";
+      setFileContents((current) => ({ ...current, [fileId]: content }));
+      writeCachedFileContent(fileId, content);
+    } catch {
+      setFileContents((current) => ({ ...current, [fileId]: "" }));
+    }
+  }, [fileContents]);
+
   useEffect(() => {
-    const loadSelectedContent = async () => {
-      if (!selectedFileId || !selectedFile || selectedFile.type !== "file") return;
-
-      if (fileContents[selectedFileId] !== undefined) return;
-
-      try {
-        const response = await fetchVaultFile(selectedFileId);
-        const content =
-          typeof response === "object" && response !== null && "content" in response
-            ? String((response as { content?: unknown }).content ?? "")
-            : "";
-        setFileContents((current) => ({ ...current, [selectedFileId]: content }));
-      } catch {
-        setFileContents((current) => ({ ...current, [selectedFileId]: "" }));
-      }
-    };
-
-    void loadSelectedContent();
-  }, [fileContents, selectedFile, selectedFileId]);
+    if (!selectedFileId || !selectedFile || selectedFile.type !== "file") return;
+    void loadSelectedFileContent(selectedFileId);
+  }, [loadSelectedFileContent, selectedFile, selectedFileId]);
 
   useEffect(() => {
     router.prefetch("/dashboard");
@@ -137,14 +146,16 @@ export function AppShell({ folderId }: AppShellProps) {
       const file = findFileNode(visibleTree, id);
       if (!file || file.type !== "file") return;
       setSelectedFileId(id);
+      void loadSelectedFileContent(id);
     },
-    [visibleTree],
+    [loadSelectedFileContent, visibleTree],
   );
 
   const handleMarkdownChange = useCallback(
     (value: string) => {
       if (!selectedFileId) return;
       setFileContents((prev) => ({ ...prev, [selectedFileId]: value }));
+      writeCachedFileContent(selectedFileId, value);
     },
     [selectedFileId],
   );
@@ -155,6 +166,7 @@ export function AppShell({ folderId }: AppShellProps) {
     await updateVaultItem(selectedFileId, {
       content: fileContents[selectedFileId] ?? "",
     });
+    writeCachedFileContent(selectedFileId, fileContents[selectedFileId] ?? "");
     refresh();
   }, [fileContents, refresh, selectedFile, selectedFileId]);
 
@@ -189,6 +201,7 @@ export function AppShell({ folderId }: AppShellProps) {
       if (nextId) {
         setSelectedFileId(nextId);
         setFileContents((current) => ({ ...current, [nextId]: NEW_FILE_TEMPLATE }));
+        writeCachedFileContent(nextId, NEW_FILE_TEMPLATE);
       }
 
       if (parentFolderId) {
@@ -232,6 +245,7 @@ export function AppShell({ folderId }: AppShellProps) {
       if (!file || file.type !== "file") return;
 
       await deleteVaultItem(fileId);
+      clearCachedFileContent(fileId);
       setFileContents((prev) => {
         const next = { ...prev };
         delete next[fileId];
@@ -428,7 +442,7 @@ export function AppShell({ folderId }: AppShellProps) {
       </header>
 
       <div className="vault-shell__workspace">
-        <ResizableWorkspace
+      <ResizableWorkspace
           fileTree={visibleTree}
           fileName={fileName}
           markdown={markdown}
