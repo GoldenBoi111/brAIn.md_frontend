@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowRight, Brain, Loader2, Lock, Sparkles } from "lucide-react";
 
 import { backendApi } from "@/lib/backend-api";
+import { setAuthenticated } from "@/lib/auth";
 
 export function SignupForm() {
   const [email, setEmail] = useState("");
@@ -37,6 +38,7 @@ export function SignupForm() {
         email: email.trim(),
         password,
       });
+      setAuthenticated(email.trim());
       window.location.assign("/dashboard");
     } catch (error) {
       setIsLoading(false);

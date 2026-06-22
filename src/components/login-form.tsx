@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { ArrowRight, Brain, Loader2, Lock, Sparkles } from "lucide-react";
 
 import { backendApi } from "@/lib/backend-api";
+import { setAuthenticated } from "@/lib/auth";
 
 export function LoginForm() {
   const searchParams = useSearchParams();
@@ -33,6 +34,7 @@ export function LoginForm() {
         email: email.trim(),
         password,
       });
+      setAuthenticated(email.trim());
 
       const nextPath = searchParams?.get("next");
       const destination =
