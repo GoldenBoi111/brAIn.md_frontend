@@ -92,6 +92,7 @@ export function PrivacyPage() {
       <footer className="privacy-page__footer">
         <Link href="/login">Login</Link>
         <Link href="/signup">Sign up</Link>
+        <Link href="/connect">Connect guide</Link>
         <Link href="/dashboard">Dashboard</Link>
       </footer>
     </main>

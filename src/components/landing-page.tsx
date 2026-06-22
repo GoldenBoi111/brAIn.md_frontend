@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { ArrowUpRight, Brain, Lock, Search, Shield } from "lucide-react";
+import { ArrowUpRight, Brain, BookOpenText, Lock, Search, Shield } from "lucide-react";
 
 import { ThemeToggleButton } from "@/components/theme-toggle-button";
 
 const NAV_LINKS = [
   { href: "/mind", label: "Mind map" },
   { href: "/dashboard", label: "Dashboard" },
+  { href: "/connect", label: "Connect guide" },
   { href: "/privacy", label: "Privacy" },
 ];
 
@@ -21,6 +22,10 @@ const HIGHLIGHTS = [
   {
     label: "Token controls",
     value: "Lock or restrict file access per token when you need it.",
+  },
+  {
+    label: "Claude + ChatGPT",
+    value: "Connect remote assistants to your public MCP endpoint.",
   },
 ];
 
@@ -39,6 +44,24 @@ const STEPS = [
     number: "03",
     title: "Control",
     copy: "Apply token-specific file locks and write restrictions from inside the vault.",
+  },
+];
+
+const QUICK_LINKS = [
+  {
+    href: "/connect",
+    label: "Read the connection guide",
+    copy: "Set up Claude or ChatGPT with the correct MCP and OAuth endpoints.",
+  },
+  {
+    href: "/privacy",
+    label: "Review privacy policy",
+    copy: "See how brAIn.md handles data, sessions, and token metadata.",
+  },
+  {
+    href: "/dashboard",
+    label: "Open the dashboard",
+    copy: "Check recent files, vault activity, and the brain vault overview.",
   },
 ];
 
@@ -72,11 +95,11 @@ export function LandingPage() {
         <div className="landing-page__hero-copy">
           <p className="landing-page__eyebrow">Living memory graph</p>
           <h1 className="landing-page__title">
-            A calm home for thoughts, files, and the graph that ties them together.
+            One brain vault for thoughts, files, and the connections that make them useful.
           </h1>
           <p className="landing-page__lede">
-            brAIn.md gives you one vault, one mind map, and a clean path from quick capture to deep
-            navigation. It feels like a notebook with a spatial memory, not a productivity dashboard.
+            brAIn.md keeps the workspace quiet and legible: a single vault, a spatial mind map,
+            token-level permissions, and a clean path from capture to Claude or ChatGPT.
           </p>
 
           <div className="landing-page__cta-row">
@@ -86,6 +109,9 @@ export function LandingPage() {
             </Link>
             <Link href="/signup" className="paper-button paper-button--outline landing-page__button">
               Create account
+            </Link>
+            <Link href="/connect" className="paper-button paper-button--ghost landing-page__button">
+              Connect Claude / ChatGPT
             </Link>
           </div>
 
@@ -103,9 +129,22 @@ export function LandingPage() {
               Privacy-first structure
             </span>
           </div>
+
+          <div className="landing-page__quick-links" aria-label="Helpful links">
+            {QUICK_LINKS.map((item) => (
+              <Link key={item.href} href={item.href} className="landing-page__quick-link">
+                <span className="landing-page__quick-link-title">{item.label}</span>
+                <span className="landing-page__quick-link-copy">{item.copy}</span>
+              </Link>
+            ))}
+          </div>
         </div>
 
         <aside className="landing-page__hero-panel" aria-label="Highlights">
+          <div className="landing-page__hero-panel-intro">
+            <BookOpenText className="size-4" />
+            <p>Designed like a notebook, organized like a graph.</p>
+          </div>
           {HIGHLIGHTS.map((item) => (
             <article key={item.label} className="landing-page__highlight">
               <p className="landing-page__highlight-label">{item.label}</p>
@@ -119,6 +158,10 @@ export function LandingPage() {
         <div className="landing-page__section-head">
           <p className="landing-page__eyebrow">How it works</p>
           <h2 className="landing-page__section-title">Three gestures: capture, navigate, control.</h2>
+          <p className="landing-page__lede landing-page__lede--tight">
+            The landing page points you to the real jobs: open the graph, inspect the vault, and
+            connect the server to Claude or ChatGPT when you are ready.
+          </p>
         </div>
 
         <div className="landing-page__step-grid">
@@ -135,17 +178,20 @@ export function LandingPage() {
       <section className="landing-page__section landing-page__section--split">
         <div className="landing-page__section-copy">
           <p className="landing-page__eyebrow">Designed for the way you think</p>
-          <h2 className="landing-page__section-title">The graph is the product. Everything else supports it.</h2>
+          <h2 className="landing-page__section-title">
+            The graph is the product. Everything else supports it.
+          </h2>
           <p className="landing-page__lede landing-page__lede--tight">
-            Use the vault sidebar for files, the mind page for spatial exploration, and the dashboard
-            for what changed recently. The landing page stays focused on the promise, not the admin.
+            Use the vault for file work, the mind page for spatial exploration, the dashboard for
+            recent activity, and the connection guide for Claude or ChatGPT setup. The site stays
+            focused on the workflow, not a generic marketing pitch.
           </p>
         </div>
 
         <div className="landing-page__proof">
           <p>Built around a single brain vault.</p>
-          <p>Connected tokens and permissions without a backend dependency.</p>
-          <p>Quick entry points to login, signup, mind map, and privacy policy.</p>
+          <p>Connected tokens and permissions without cluttering the experience.</p>
+          <p>Quick entry points to login, signup, mind map, connect guide, and privacy policy.</p>
         </div>
       </section>
 
