@@ -19,10 +19,10 @@ import GradientText from "@/components/GradientText";
 import ShinyText from "@/components/ShinyText";
 import { clearAuthenticatedSession } from "@/lib/auth";
 import { backendApi } from "@/lib/backend-api";
-import { createHubVault, getFileTree, getHubVaults } from "@/lib/vault-catalog";
+import { useVaultTree } from "@/hooks/use-vault-tree";
 import { collectFiles, getFilePath, getParentFolderId } from "@/lib/vault";
 import type { FileNode } from "@/types/file-tree";
-import type { MockVault } from "@/lib/mock-data";
+import { buildChildNamePath, createVaultItem, ROOT_VAULT_ID } from "@/lib/vault-api";
 
 function formatDate(value: string | undefined): string {
   if (!value) return "Unknown";
@@ -77,9 +77,9 @@ function getTopLevelFolderId(tree: FileNode[], fileId: string): string | null {
 }
 
 export function DashboardHub() {
-  const [vaults, setVaults] = useState<MockVault[]>(() => getHubVaults());
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const { tree: fileTree, loading, error, refresh } = useVaultTree();
 
   useEffect(() => {
     const root = document.documentElement;
@@ -92,7 +92,6 @@ export function DashboardHub() {
     return () => observer.disconnect();
   }, []);
 
-  const fileTree = useMemo(() => getFileTree(), [vaults]);
   const rootVault = useMemo(() => getRootFolder(fileTree), [fileTree]);
   const mainFolders = useMemo(() => getMainFolders(rootVault), [rootVault]);
   const files = useMemo(
@@ -130,10 +129,6 @@ export function DashboardHub() {
     [isDarkMode],
   );
 
-  const refreshVaults = useCallback(() => {
-    setVaults(getHubVaults());
-  }, []);
-
   const handleSignOut = async () => {
     try {
       await backendApi.logout();
@@ -146,15 +141,17 @@ export function DashboardHub() {
   };
 
   const handleCreateFolder = useCallback(
-    (rawName: string, parentFolderId: string | null) => {
+    async (rawName: string, parentFolderId: string | null) => {
       if (parentFolderId !== null) return;
-      createHubVault(rawName);
-      refreshVaults();
+
+      const path = buildChildNamePath(fileTree, ROOT_VAULT_ID, rawName, "folder");
+      await createVaultItem({ kind: "folder", path });
+      refresh();
     },
-    [refreshVaults],
+    [fileTree, refresh],
   );
 
-  const brainVault = vaults[0] ?? null;
+  const brainVault = rootVault;
   const sidebarLinks = useMemo(
     () => [
       { href: "/dashboard", label: "Dashboard", description: "Overview and recent memories." },
@@ -165,8 +162,8 @@ export function DashboardHub() {
     [brainVault],
   );
 
-  return (
-    <main className="hub-page">
+    return (
+      <main className="hub-page">
       <div className="pointer-events-none absolute inset-0 opacity-35">
         <Aurora
           colorStops={hubAuroraStops}
@@ -190,14 +187,14 @@ export function DashboardHub() {
                     brAIn.md
                   </GradientText>
                 </div>
-                <div className="hub-page__sidebar-copy">
-                  <p className="hub-page__sidebar-eyebrow">Navigate</p>
-                  <p className="hub-page__sidebar-title">One brain vault</p>
-                  <p className="hub-page__sidebar-lede">
+              <div className="hub-page__sidebar-copy">
+                <p className="hub-page__sidebar-eyebrow">Navigate</p>
+                <p className="hub-page__sidebar-title">One brain vault</p>
+                <p className="hub-page__sidebar-lede">
                     Everything lives inside the Brain Vault. Use the links below
                     to move between the overview, vault root, and mind map.
-                  </p>
-                </div>
+                </p>
+              </div>
                 <nav className="hub-page__sidebar-nav" aria-label="Dashboard pages">
                   {sidebarLinks.map((item) => (
                     <Link key={item.href} href={item.href} className="hub-page__sidebar-link">
@@ -272,7 +269,7 @@ export function DashboardHub() {
                 <div className="hub-page__section-head">
                   <p className="hub-page__section-label">Brain vault</p>
                   <span className="hub-page__section-meta">
-                    {brainVault ? `${brainVault.fileCount} memories` : "Unavailable"}
+                    {brainVault ? `${collectFiles(fileTree).length} memories` : "Unavailable"}
                   </span>
                 </div>
 
@@ -292,14 +289,14 @@ export function DashboardHub() {
                       <div className="hub-page__link-main">
                         <FolderOpen className="size-4 shrink-0 text-muted-foreground" />
                         <div className="min-w-0">
-                          <span className="hub-page__link-title">{brainVault.name}</span>
-                          <span className="hub-page__link-desc">
-                            {brainVault.description}
-                          </span>
+                            <span className="hub-page__link-title">{brainVault.name}</span>
+                            <span className="hub-page__link-desc">
+                            {brainVault.children?.length ?? 0} main branches inside the vault
+                            </span>
                         </div>
                       </div>
                       <div className="hub-page__link-meta">
-                        <span>{brainVault.fileCount} notes</span>
+                        <span>{collectFiles(fileTree).length} notes</span>
                         <ArrowUpRight className="size-3.5 opacity-60" />
                       </div>
                     </Link>
@@ -335,9 +332,9 @@ export function DashboardHub() {
                           <div className="hub-page__link-main">
                             <FolderOpen className="size-4 shrink-0 text-muted-foreground" />
                             <div className="min-w-0">
-                              <span className="hub-page__link-title">{folder.name}</span>
-                              <span className="hub-page__link-desc">
-                                {folder.children?.length ?? 0} contained memories and folders
+                      <span className="hub-page__link-title">{folder.name}</span>
+                      <span className="hub-page__link-desc">
+                        {folder.children?.length ?? 0} contained memories and folders
                               </span>
                             </div>
                           </div>
@@ -455,6 +452,16 @@ export function DashboardHub() {
           fileTree={fileTree}
           onCreate={handleCreateFolder}
         />
+      ) : null}
+      {loading ? (
+        <div className="hub-page__loading" aria-live="polite">
+          Loading vault from API...
+        </div>
+      ) : null}
+      {error ? (
+        <div className="hub-page__loading hub-page__loading--error" aria-live="polite">
+          {error}
+        </div>
       ) : null}
     </main>
   );

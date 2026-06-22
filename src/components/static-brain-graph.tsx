@@ -16,12 +16,12 @@ import {
 } from "@/components/ui/command";
 import { backendApi } from "@/lib/backend-api";
 import { clearAuthenticatedSession } from "@/lib/auth";
+import { useVaultTree } from "@/hooks/use-vault-tree";
 import {
   buildFileTreeGraph,
   getFileGraphSearchIndex,
   type FileGraphRecord,
 } from "@/lib/file-tree-graph";
-import { getFileTree } from "@/lib/vault-catalog";
 import type { FileNode } from "@/types/file-tree";
 
 const LIGHT_CLUSTER_ACCENTS = ["#220901", "#621708", "#941b0c", "#bc3908", "#f6aa1c"];
@@ -42,36 +42,12 @@ function pickAccent(cluster: string, isDark: boolean) {
   return palette[hashString(cluster) % palette.length];
 }
 
-function useVaultFileTree(fileTree?: FileNode[]) {
-  const [currentTree, setCurrentTree] = useState<FileNode[]>(() => fileTree ?? getFileTree());
-
-  useEffect(() => {
-    if (fileTree) {
-      setCurrentTree(fileTree);
-      return;
-    }
-
-    const syncTree = () => setCurrentTree(getFileTree());
-    syncTree();
-
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key === "brain-md-user-folders") {
-        syncTree();
-      }
-    };
-
-    window.addEventListener("storage", handleStorage);
-    return () => window.removeEventListener("storage", handleStorage);
-  }, [fileTree]);
-
-  return currentTree;
-}
-
 interface StaticBrainGraphProps {
   fileTree?: FileNode[];
 }
 
 export function StaticBrainGraph({ fileTree: fileTreeProp }: StaticBrainGraphProps = {}) {
+  const { tree: apiTree } = useVaultTree();
   const [isDark, setIsDark] = useState(false);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [pinnedId, setPinnedId] = useState<string | null>(null);
@@ -79,7 +55,7 @@ export function StaticBrainGraph({ fileTree: fileTreeProp }: StaticBrainGraphPro
   const [searchQuery, setSearchQuery] = useState("");
   const [hideUnconnectedDots, setHideUnconnectedDots] = useState(false);
 
-  const fileTree = useVaultFileTree(fileTreeProp);
+  const fileTree = fileTreeProp ?? apiTree;
   const graph = useMemo(() => buildFileTreeGraph(fileTree), [fileTree]);
   const graphNodes = useMemo(
     () =>

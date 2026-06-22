@@ -3,6 +3,7 @@ import type { FileNode, LlmAccess } from "@/types/file-tree";
 
 export function getLlmAccess(node: FileNode): LlmAccess {
   if (node.type === "folder") return "default";
+  if (node.locked) return "no_write";
   return node.llmAccess ?? "default";
 }
 

@@ -15,7 +15,7 @@ import { ArrowLeft, Brain } from "lucide-react";
 
 import "@xyflow/react/dist/style.css";
 
-import { getFileTree } from "@/lib/vault-catalog";
+import { useVaultTree } from "@/hooks/use-vault-tree";
 import type { FileNode } from "@/types/file-tree";
 
 const CENTER_ID = "hub-brain-md";
@@ -176,7 +176,7 @@ function buildMindMapGraph(fileTree: FileNode[]): { nodes: Node[]; edges: Edge[]
 }
 
 export function MindGraph() {
-  const fileTree = useMemo(() => getFileTree(), []);
+  const { tree: fileTree } = useVaultTree();
   const { nodes, edges } = useMemo(() => buildMindMapGraph(fileTree), [fileTree]);
 
   const onInit = useCallback(() => {}, []);

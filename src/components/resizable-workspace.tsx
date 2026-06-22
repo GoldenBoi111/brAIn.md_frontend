@@ -12,7 +12,7 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { cn } from "@/lib/utils";
-import type { FileNode, LlmAccess } from "@/types/file-tree";
+import type { FileNode } from "@/types/file-tree";
 
 const SIDEBAR_DEFAULT_SIZE = 18;
 const SIDEBAR_MIN_SIZE = 10;
@@ -39,7 +39,6 @@ interface ResizableWorkspaceProps {
   onDeleteFile: (fileId: string) => void;
   onRenameFolder: (folderId: string) => void;
   onDeleteFolder: (folderId: string) => void;
-  onSetLlmAccess: (fileId: string, access: LlmAccess) => void;
   expandFolderId: string | null;
   defaultExpandedIds?: string[];
   sidebarCollapsed: boolean;
@@ -68,7 +67,6 @@ export function ResizableWorkspace({
   onDeleteFile,
   onRenameFolder,
   onDeleteFolder,
-  onSetLlmAccess,
   expandFolderId,
   defaultExpandedIds = [],
   sidebarCollapsed,
@@ -121,7 +119,6 @@ export function ResizableWorkspace({
             onDeleteFile={onDeleteFile}
             onRenameFolder={onRenameFolder}
             onDeleteFolder={onDeleteFolder}
-            onSetLlmAccess={onSetLlmAccess}
             defaultExpandedIds={defaultExpandedIds}
             expandFolderId={expandFolderId}
           />

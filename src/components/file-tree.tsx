@@ -14,7 +14,7 @@ import { FileTreeContextMenu } from "@/components/file-tree-context-menu";
 import { getLlmAccess } from "@/lib/llm-access";
 import { findFileNode, getParentFolderId } from "@/lib/vault";
 import { cn } from "@/lib/utils";
-import type { FileNode, LlmAccess } from "@/types/file-tree";
+import type { FileNode } from "@/types/file-tree";
 
 interface FileTreeProps {
   nodes: FileNode[];
@@ -26,7 +26,6 @@ interface FileTreeProps {
   onDeleteFile: (fileId: string) => void;
   onRenameFolder: (folderId: string) => void;
   onDeleteFolder: (folderId: string) => void;
-  onSetLlmAccess: (fileId: string, access: LlmAccess) => void;
   defaultExpandedIds?: string[];
   expandFolderId?: string | null;
 }
@@ -38,7 +37,6 @@ interface ContextMenuState {
   label: string;
   targetFileId: string | null;
   targetFileName: string | null;
-  targetFileLlmAccess: LlmAccess | null;
   targetFolderId: string | null;
   targetFolderName: string | null;
 }
@@ -159,7 +157,6 @@ export function FileTree({
   onDeleteFile,
   onRenameFolder,
   onDeleteFolder,
-  onSetLlmAccess,
   defaultExpandedIds = [],
   expandFolderId = null,
 }: FileTreeProps) {
@@ -208,7 +205,6 @@ export function FileTree({
         label,
         targetFileId: node.type === "file" ? node.id : null,
         targetFileName: node.type === "file" ? node.name : null,
-        targetFileLlmAccess: node.type === "file" ? getLlmAccess(node) : null,
         targetFolderId: node.type === "folder" ? node.id : null,
         targetFolderName: node.type === "folder" ? node.name : null,
       });
@@ -228,7 +224,6 @@ export function FileTree({
         label: "",
         targetFileId: null,
         targetFileName: null,
-        targetFileLlmAccess: null,
         targetFolderId: null,
         targetFolderName: null,
       });
@@ -264,7 +259,6 @@ export function FileTree({
         label={contextMenu?.label ?? ""}
         fileName={contextMenu?.targetFileName ?? null}
         folderName={contextMenu?.targetFolderName ?? null}
-        fileLlmAccess={contextMenu?.targetFileLlmAccess ?? null}
         onClose={() => setContextMenu(null)}
         onCreateFile={() => {
           if (!contextMenu) return;
@@ -289,10 +283,6 @@ export function FileTree({
         onDeleteFolder={() => {
           if (!contextMenu?.targetFolderId) return;
           onDeleteFolder(contextMenu.targetFolderId);
-        }}
-        onSetLlmAccess={(access) => {
-          if (!contextMenu?.targetFileId) return;
-          onSetLlmAccess(contextMenu.targetFileId, access);
         }}
       />
     </>

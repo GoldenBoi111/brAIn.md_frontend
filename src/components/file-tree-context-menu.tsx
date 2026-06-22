@@ -1,19 +1,9 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import {
-  Bot,
-  Check,
-  EyeOff,
-  FilePlus,
-  FolderPlus,
-  Lock,
-  Pencil,
-  Trash2,
-} from "lucide-react";
+import { FilePlus, FolderPlus, Pencil, Trash2 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import type { LlmAccess } from "@/types/file-tree";
 
 interface FileTreeContextMenuProps {
   open: boolean;
@@ -22,7 +12,6 @@ interface FileTreeContextMenuProps {
   label: string;
   fileName: string | null;
   folderName: string | null;
-  fileLlmAccess: LlmAccess | null;
   onClose: () => void;
   onCreateFile: () => void;
   onCreateFolder: () => void;
@@ -30,18 +19,7 @@ interface FileTreeContextMenuProps {
   onDeleteFile: () => void;
   onRenameFolder: () => void;
   onDeleteFolder: () => void;
-  onSetLlmAccess: (access: LlmAccess) => void;
 }
-
-const LLM_ACCESS_OPTIONS: {
-  access: LlmAccess;
-  label: string;
-  icon: typeof Bot;
-}[] = [
-  { access: "default", label: "Default", icon: Bot },
-  { access: "no_write", label: "Read-only for AI", icon: Lock },
-  { access: "hidden", label: "Hidden from AI", icon: EyeOff },
-];
 
 export function FileTreeContextMenu({
   open,
@@ -50,7 +28,6 @@ export function FileTreeContextMenu({
   label,
   fileName,
   folderName,
-  fileLlmAccess,
   onClose,
   onCreateFile,
   onCreateFolder,
@@ -58,7 +35,6 @@ export function FileTreeContextMenu({
   onDeleteFile,
   onRenameFolder,
   onDeleteFolder,
-  onSetLlmAccess,
 }: FileTreeContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -155,31 +131,6 @@ export function FileTreeContextMenu({
             <Trash2 className="size-3.5 shrink-0" />
             <span className="min-w-0 truncate">Delete {fileName}</span>
           </button>
-
-          <div className="my-1 h-px bg-border/70" />
-          <p className="px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-            AI access
-          </p>
-          {LLM_ACCESS_OPTIONS.map(({ access, label: optionLabel, icon: Icon }) => {
-            const isActive = (fileLlmAccess ?? "default") === access;
-            return (
-              <button
-                key={access}
-                type="button"
-                role="menuitemradio"
-                aria-checked={isActive}
-                className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-[13px] transition-colors hover:bg-accent hover:text-accent-foreground"
-                onClick={() => {
-                  onSetLlmAccess(access);
-                  onClose();
-                }}
-              >
-                <Icon className="size-3.5 shrink-0" />
-                <span className="min-w-0 flex-1 truncate">{optionLabel}</span>
-                {isActive && <Check className="size-3.5 shrink-0 opacity-70" />}
-              </button>
-            );
-          })}
         </>
       )}
 

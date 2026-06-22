@@ -13,55 +13,35 @@ import { RenameFolderDialog } from "@/components/rename-folder-dialog";
 import { ResizableWorkspace } from "@/components/resizable-workspace";
 import { TokenAccessPalette } from "@/components/token-access-palette";
 import { ThemeToggleButton } from "@/components/theme-toggle-button";
-import {
-  usePreviewControls,
-  useSidebarControls,
-} from "@/hooks/use-panel-controls";
-import {
-  DEFAULT_FILE_ID,
-  MOCK_FILE_CONTENTS,
-} from "@/lib/mock-data";
+import { usePreviewControls, useSidebarControls } from "@/hooks/use-panel-controls";
+import { useVaultTree } from "@/hooks/use-vault-tree";
 import { getLlmAccess, getLlmAccessLabel } from "@/lib/llm-access";
-import { getFileTree } from "@/lib/vault-catalog";
-import { loadVaultFileContents, saveVaultFileContents } from "@/lib/vault-contents";
 import { cn } from "@/lib/utils";
+import { findFileNode, getFirstSelectableFileId, resolveCreateParentId } from "@/lib/vault";
 import {
-  collectFileIdsInSubtree,
-  createFileInTree,
-  createFolderInTree,
-  findFileNode,
-  getFirstSelectableFileId,
-  getFilePath,
-  removeFileFromTree,
-  removeFolderFromTree,
-  renameFileInTree,
-  renameFolderInTree,
-  resolveCreateParentId,
-  setFileLlmAccessInTree,
-} from "@/lib/vault";
-import type { LlmAccess } from "@/types/file-tree";
+  ROOT_VAULT_ID,
+  buildChildNamePath,
+  createVaultItem,
+  deleteVaultItem,
+  fetchVaultFile,
+  resolveNodePath,
+  updateVaultItem,
+} from "@/lib/vault-api";
+import type { FileNode } from "@/types/file-tree";
 
 const NEW_FILE_TEMPLATE = "# New note\n\nStart writing...";
 
-function getVaultInitialState(folderId: string) {
-  const fileTree = getFileTree();
+function getVisibleVaultTree(fileTree: FileNode[], folderId: string): FileNode[] {
   const vaultFolder = findFileNode(fileTree, folderId);
-
   if (!vaultFolder || vaultFolder.type !== "folder") {
-    return {
-      tree: fileTree,
-      selectedId: DEFAULT_FILE_ID,
-      valid: false,
-    };
+    return [];
   }
 
-  const tree = [vaultFolder];
+  return [vaultFolder];
+}
 
-  return {
-    tree,
-    selectedId: getFirstSelectableFileId(tree),
-    valid: true,
-  };
+function getInitialSelection(nodes: FileNode[]): string | null {
+  return getFirstSelectableFileId(nodes);
 }
 
 interface AppShellProps {
@@ -74,6 +54,8 @@ export function AppShell({ folderId }: AppShellProps) {
     useSidebarControls();
   const { previewRef, previewCollapsed, setPreviewCollapsed, togglePreview } =
     usePreviewControls();
+  const { tree: fileTree, loading, error, refresh } = useVaultTree();
+
   const [commandOpen, setCommandOpen] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [createFolderDialogOpen, setCreateFolderDialogOpen] = useState(false);
@@ -83,28 +65,32 @@ export function AppShell({ folderId }: AppShellProps) {
   const [tokenAccessMode, setTokenAccessMode] = useState<"locked" | "readOnly">("locked");
   const [renameFileId, setRenameFileId] = useState<string | null>(null);
   const [renameFolderId, setRenameFolderId] = useState<string | null>(null);
-  const [createParentFolderId, setCreateParentFolderId] = useState<string | null>(
-    null,
-  );
-  const [createFolderParentId, setCreateFolderParentId] = useState<string | null>(
-    null,
-  );
+  const [createParentFolderId, setCreateParentFolderId] = useState<string | null>(null);
+  const [createFolderParentId, setCreateFolderParentId] = useState<string | null>(null);
   const [expandFolderId, setExpandFolderId] = useState<string | null>(folderId);
-  const initialVaultState = useMemo(
-    () => getVaultInitialState(folderId),
-    [folderId],
+  const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
+  const [fileContents, setFileContents] = useState<Record<string, string>>({});
+
+  const visibleTree = useMemo(
+    () => getVisibleVaultTree(fileTree, folderId),
+    [fileTree, folderId],
   );
-  const [fileTree, setFileTree] = useState(() => initialVaultState.tree);
-  const [selectedFileId, setSelectedFileId] = useState<string | null>(
-    () => initialVaultState.selectedId,
-  );
-  const [fileContents, setFileContents] = useState<Record<string, string>>(
-    () => ({ ...MOCK_FILE_CONTENTS, ...loadVaultFileContents() }),
-  );
+  const visibleFolder = visibleTree[0] ?? null;
+
+  useEffect(() => {
+    if (!visibleTree.length) return;
+
+    setSelectedFileId((current) => {
+      if (current && findFileNode(visibleTree, current)?.type === "file") {
+        return current;
+      }
+      return getInitialSelection(visibleTree);
+    });
+  }, [visibleTree]);
 
   const selectedFile = useMemo(
-    () => (selectedFileId ? findFileNode(fileTree, selectedFileId) : null),
-    [fileTree, selectedFileId],
+    () => (selectedFileId ? findFileNode(visibleTree, selectedFileId) : null),
+    [selectedFileId, visibleTree],
   );
 
   const markdown = selectedFileId ? (fileContents[selectedFileId] ?? "") : "";
@@ -117,15 +103,42 @@ export function AppShell({ folderId }: AppShellProps) {
   }, [selectedFile]);
 
   const selectedFilePath =
-    selectedFile?.type === "file" && selectedFileId ? getFilePath(fileTree, selectedFileId) : null;
+    selectedFile?.type === "file" && selectedFileId
+      ? resolveNodePath(fileTree, selectedFileId)
+      : null;
+
+  useEffect(() => {
+    const loadSelectedContent = async () => {
+      if (!selectedFileId || !selectedFile || selectedFile.type !== "file") return;
+
+      if (fileContents[selectedFileId] !== undefined) return;
+
+      try {
+        const response = await fetchVaultFile(selectedFileId);
+        const content =
+          typeof response === "object" && response !== null && "content" in response
+            ? String((response as { content?: unknown }).content ?? "")
+            : "";
+        setFileContents((current) => ({ ...current, [selectedFileId]: content }));
+      } catch {
+        setFileContents((current) => ({ ...current, [selectedFileId]: "" }));
+      }
+    };
+
+    void loadSelectedContent();
+  }, [fileContents, selectedFile, selectedFileId]);
+
+  useEffect(() => {
+    router.prefetch("/dashboard");
+  }, [router]);
 
   const handleSelectFile = useCallback(
     (id: string) => {
-      const file = findFileNode(fileTree, id);
+      const file = findFileNode(visibleTree, id);
       if (!file || file.type !== "file") return;
       setSelectedFileId(id);
     },
-    [fileTree],
+    [visibleTree],
   );
 
   const handleMarkdownChange = useCallback(
@@ -136,9 +149,14 @@ export function AppShell({ folderId }: AppShellProps) {
     [selectedFileId],
   );
 
-  const handleSaveMarkdown = useCallback(() => {
-    saveVaultFileContents(fileContents);
-  }, [fileContents]);
+  const handleSaveMarkdown = useCallback(async () => {
+    if (!selectedFileId || !selectedFile || selectedFile.type !== "file") return;
+
+    await updateVaultItem(selectedFileId, {
+      content: fileContents[selectedFileId] ?? "",
+    });
+    refresh();
+  }, [fileContents, refresh, selectedFile, selectedFileId]);
 
   const openCreateDialog = useCallback((parentFolderId: string | null) => {
     setCreateParentFolderId(parentFolderId);
@@ -151,54 +169,69 @@ export function AppShell({ folderId }: AppShellProps) {
   }, []);
 
   const handleExplorerCreate = useCallback(() => {
-    openCreateDialog(resolveCreateParentId(fileTree, selectedFileId));
-  }, [fileTree, openCreateDialog, selectedFileId]);
+    openCreateDialog(resolveCreateParentId(visibleTree, selectedFileId));
+  }, [openCreateDialog, selectedFileId, visibleTree]);
 
   const handleCreateFile = useCallback(
-    (rawName: string, parentFolderId: string | null) => {
-      const { tree, file } = createFileInTree(fileTree, parentFolderId, rawName);
+    async (rawName: string, parentFolderId: string | null) => {
+      const path = buildChildNamePath(fileTree, parentFolderId ?? ROOT_VAULT_ID, rawName, "file");
+      const response = await createVaultItem({
+        kind: "file",
+        path,
+        content: NEW_FILE_TEMPLATE,
+      });
 
-      setFileTree(tree);
-      setFileContents((prev) => ({
-        ...prev,
-        [file.id]: NEW_FILE_TEMPLATE,
-      }));
-      setSelectedFileId(file.id);
+      const nextId =
+        typeof response === "object" && response !== null && "file_id" in response
+          ? String((response as { file_id?: unknown }).file_id ?? "")
+          : "";
+
+      if (nextId) {
+        setSelectedFileId(nextId);
+        setFileContents((current) => ({ ...current, [nextId]: NEW_FILE_TEMPLATE }));
+      }
 
       if (parentFolderId) {
         setExpandFolderId(parentFolderId);
       }
+
+      refresh();
     },
-    [fileTree],
+    [fileTree, refresh],
   );
 
   const handleCreateFolder = useCallback(
-    (rawName: string, parentFolderId: string | null) => {
-      const { tree, folder } = createFolderInTree(
+    async (rawName: string, parentFolderId: string | null) => {
+      const path = buildChildNamePath(
         fileTree,
-        parentFolderId,
+        parentFolderId ?? ROOT_VAULT_ID,
         rawName,
+        "folder",
       );
 
-      setFileTree(tree);
+      const response = await createVaultItem({ kind: "folder", path });
+      const nextId =
+        typeof response === "object" && response !== null && "folder_id" in response
+          ? String((response as { folder_id?: unknown }).folder_id ?? "")
+          : "";
 
       if (parentFolderId) {
         setExpandFolderId(parentFolderId);
-      } else {
-        setExpandFolderId(folder.id);
+      } else if (nextId) {
+        setExpandFolderId(nextId);
       }
+
+      refresh();
     },
-    [fileTree],
+    [fileTree, refresh],
   );
 
   const handleDeleteFile = useCallback(
-    (fileId: string) => {
+    async (fileId: string) => {
       const file = findFileNode(fileTree, fileId);
       if (!file || file.type !== "file") return;
 
-      const nextTree = removeFileFromTree(fileTree, fileId);
-
-      setFileTree(nextTree);
+      await deleteVaultItem(fileId);
       setFileContents((prev) => {
         const next = { ...prev };
         delete next[fileId];
@@ -206,10 +239,12 @@ export function AppShell({ folderId }: AppShellProps) {
       });
 
       if (selectedFileId === fileId) {
-        setSelectedFileId(getFirstSelectableFileId(nextTree));
+        setSelectedFileId(getInitialSelection(visibleTree));
       }
+
+      refresh();
     },
-    [fileTree, selectedFileId],
+    [fileTree, refresh, selectedFileId, visibleTree],
   );
 
   const openRenameDialog = useCallback((fileId: string) => {
@@ -218,15 +253,17 @@ export function AppShell({ folderId }: AppShellProps) {
   }, []);
 
   const handleRenameFile = useCallback(
-    (rawName: string) => {
+    async (rawName: string) => {
       if (!renameFileId) return;
 
       const file = findFileNode(fileTree, renameFileId);
       if (!file || file.type !== "file") return;
 
-      setFileTree(renameFileInTree(fileTree, renameFileId, rawName));
+      const newPath = buildChildNamePath(fileTree, resolveCreateParentId(fileTree, renameFileId), rawName, "file");
+      await updateVaultItem(renameFileId, { path: newPath });
+      refresh();
     },
-    [fileTree, renameFileId],
+    [fileTree, renameFileId, refresh],
   );
 
   const openRenameFolderDialog = useCallback((folderId: string) => {
@@ -235,73 +272,69 @@ export function AppShell({ folderId }: AppShellProps) {
   }, []);
 
   const handleRenameFolder = useCallback(
-    (rawName: string) => {
-      if (!renameFolderId) return;
+    async (rawName: string) => {
+      if (!renameFolderId || renameFolderId === ROOT_VAULT_ID) return;
 
       const folder = findFileNode(fileTree, renameFolderId);
       if (!folder || folder.type !== "folder") return;
 
-      setFileTree(renameFolderInTree(fileTree, renameFolderId, rawName));
+      const parentFolderId = resolveCreateParentId(fileTree, renameFolderId);
+      const newPath = buildChildNamePath(fileTree, parentFolderId ?? ROOT_VAULT_ID, rawName, "folder");
+      await updateVaultItem(renameFolderId, { path: newPath });
+      refresh();
     },
-    [fileTree, renameFolderId],
+    [fileTree, refresh, renameFolderId],
   );
 
   const handleDeleteFolder = useCallback(
-    (folderId: string) => {
-      const folder = findFileNode(fileTree, folderId);
+    async (folderIdValue: string) => {
+      if (folderIdValue === ROOT_VAULT_ID) return;
+
+      const folder = findFileNode(fileTree, folderIdValue);
       if (!folder || folder.type !== "folder") {
         return;
       }
 
-      const removedFileIds = collectFileIdsInSubtree(folder);
-      const nextTree = removeFolderFromTree(fileTree, folderId);
+      await deleteVaultItem(folderIdValue);
+      if (selectedFileId && findFileNode([folder], selectedFileId)) {
+        setSelectedFileId(getInitialSelection(visibleTree));
+      }
 
-      setFileTree(nextTree);
-      setFileContents((prev) => {
-        const next = { ...prev };
-        for (const fileId of removedFileIds) {
-          delete next[fileId];
-        }
-        return next;
-      });
+      refresh();
 
-      if (selectedFileId && removedFileIds.includes(selectedFileId)) {
-        setSelectedFileId(getFirstSelectableFileId(nextTree));
+      if (folderIdValue === folderId) {
+        router.replace("/dashboard");
       }
     },
-    [fileTree, selectedFileId],
-  );
-
-  const handleSetLlmAccess = useCallback(
-    (fileId: string, access: LlmAccess) => {
-      const file = findFileNode(fileTree, fileId);
-      if (!file || file.type !== "file") return;
-
-      setFileTree(setFileLlmAccessInTree(fileTree, fileId, access));
-    },
-    [fileTree],
+    [fileTree, folderId, refresh, router, selectedFileId, visibleTree],
   );
 
   const renameFolderName =
     renameFolderId ? (findFileNode(fileTree, renameFolderId)?.name ?? "") : "";
 
-  const renameFileName =
-    renameFileId ? (findFileNode(fileTree, renameFileId)?.name ?? "") : "";
+  const renameFileName = renameFileId ? (findFileNode(fileTree, renameFileId)?.name ?? "") : "";
 
-  const vaultName = useMemo(() => {
-    const folder = findFileNode(getFileTree(), folderId);
-    return folder?.name ?? "Vault";
-  }, [folderId]);
+  const vaultName = visibleFolder?.name ?? "Vault";
 
-  useEffect(() => {
-    router.prefetch("/dashboard");
-  }, [router]);
+  const isReady = !loading && Boolean(visibleFolder);
 
-  if (!initialVaultState.valid) {
+  if (loading) {
     return (
       <div className="vault-shell vault-shell--empty">
         <div className="vault-shell__empty-card">
-          <p className="text-sm text-muted-foreground">This vault could not be found.</p>
+          <p className="text-sm text-muted-foreground">Loading vault from API...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !isReady) {
+    return (
+      <div className="vault-shell vault-shell--empty">
+        <div className="vault-shell__empty-card">
+          <p className="text-sm text-muted-foreground">
+            {error ?? "This vault could not be found."}
+          </p>
         </div>
         <Link
           href="/dashboard"
@@ -333,9 +366,7 @@ export function AppShell({ folderId }: AppShellProps) {
           >
             <PanelLeft className="size-4" />
           </button>
-          <span className="vault-shell__title">
-            {vaultName}
-          </span>
+          <span className="vault-shell__title">{vaultName}</span>
         </div>
 
         <div className="vault-shell__topbar-group vault-shell__topbar-group--actions">
@@ -353,7 +384,7 @@ export function AppShell({ folderId }: AppShellProps) {
             )}
             aria-label="Open token lock palette"
             aria-pressed={false}
-            title="AI read-only — LLM can read but not edit this note"
+            title="AI read-only - LLM can read but not edit this note"
           >
             <Lock className="size-4" />
           </button>
@@ -370,7 +401,7 @@ export function AppShell({ folderId }: AppShellProps) {
             )}
             aria-label="Open token write restriction palette"
             aria-pressed={false}
-            title="Hidden from AI — LLM cannot read or edit this note"
+            title="Hidden from AI - LLM cannot read or edit this note"
           >
             <EyeOff className="size-4" />
           </button>
@@ -382,7 +413,7 @@ export function AppShell({ folderId }: AppShellProps) {
             <Search className="size-3.5" />
             <span>Search</span>
             <span className="pointer-events-none hidden rounded border border-border/60 bg-muted px-1.5 py-0.5 font-mono text-[10px] sm:inline-block">
-              ⌘K
+              Cmd K
             </span>
           </button>
           <button
@@ -398,7 +429,7 @@ export function AppShell({ folderId }: AppShellProps) {
 
       <div className="vault-shell__workspace">
         <ResizableWorkspace
-          fileTree={fileTree}
+          fileTree={visibleTree}
           fileName={fileName}
           markdown={markdown}
           llmAccessLabel={llmAccessLabel}
@@ -414,7 +445,6 @@ export function AppShell({ folderId }: AppShellProps) {
           onDeleteFile={handleDeleteFile}
           onRenameFolder={openRenameFolderDialog}
           onDeleteFolder={handleDeleteFolder}
-          onSetLlmAccess={handleSetLlmAccess}
           expandFolderId={expandFolderId}
           defaultExpandedIds={[folderId]}
           sidebarCollapsed={sidebarCollapsed}
@@ -441,7 +471,7 @@ export function AppShell({ folderId }: AppShellProps) {
         <CommandPalette
           open={commandOpen}
           onOpenChange={setCommandOpen}
-          fileTree={fileTree}
+          fileTree={visibleTree}
           selectedFileId={selectedFileId}
           onSelectFile={handleSelectFile}
           onCreateFile={openCreateDialog}
@@ -453,7 +483,7 @@ export function AppShell({ folderId }: AppShellProps) {
           open={createDialogOpen}
           onOpenChange={setCreateDialogOpen}
           parentFolderId={createParentFolderId}
-          fileTree={fileTree}
+          fileTree={visibleTree}
           onCreate={handleCreateFile}
         />
       ) : null}
@@ -463,7 +493,7 @@ export function AppShell({ folderId }: AppShellProps) {
           open={createFolderDialogOpen}
           onOpenChange={setCreateFolderDialogOpen}
           parentFolderId={createFolderParentId}
-          fileTree={fileTree}
+          fileTree={visibleTree}
           onCreate={handleCreateFolder}
         />
       ) : null}
