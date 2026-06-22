@@ -154,10 +154,15 @@ export function DashboardHub() {
   const brainVault = rootVault;
   const sidebarLinks = useMemo(
     () => [
+      { href: "/", label: "Home", description: "Landing page and project overview." },
       { href: "/dashboard", label: "Dashboard", description: "Overview and recent memories." },
       { href: "/tokens", label: "Tokens", description: "Token names, images, refresh, and delete." },
       brainVault ? { href: `/vault/${brainVault.id}`, label: "Vault", description: "Open the Brain Vault." } : null,
       { href: "/mind", label: "Mind map", description: "Explore the brain graph." },
+      { href: "/connect", label: "Connect", description: "Claude and ChatGPT setup guide." },
+      { href: "/privacy", label: "Privacy", description: "Data and storage notes." },
+      { href: "/login", label: "Log in", description: "Access the vault and graph." },
+      { href: "/signup", label: "Sign up", description: "Create a new account." },
     ].filter(Boolean) as Array<{ href: string; label: string; description: string }>,
     [brainVault],
   );

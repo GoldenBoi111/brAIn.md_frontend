@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { SiteFrame } from "@/components/site-frame";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -26,7 +27,7 @@ export default function RootLayout({
         className="min-h-full overflow-x-hidden overflow-y-auto antialiased"
         suppressHydrationWarning
       >
-        {children}
+        <SiteFrame>{children}</SiteFrame>
       </body>
     </html>
   );

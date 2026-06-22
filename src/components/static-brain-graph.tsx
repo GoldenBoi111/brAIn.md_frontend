@@ -111,9 +111,14 @@ export function StaticBrainGraph({ fileTree: fileTreeProp }: StaticBrainGraphPro
 
   const siteLinks = useMemo(
     () => [
+      { href: "/", label: "Home", description: "Landing page and project overview." },
       { href: "/dashboard", label: "Dashboard", description: "Vault hub and recent-file insights." },
       { href: "/tokens", label: "Tokens", description: "Token names, images, and vault permissions." },
       { href: "/mind", label: "Mind map", description: "Open the brain-centered atlas." },
+      { href: "/connect", label: "Connect", description: "Claude and ChatGPT setup guide." },
+      { href: "/privacy", label: "Privacy", description: "Data and storage notes." },
+      { href: "/login", label: "Log in", description: "Access the vault and graph." },
+      { href: "/signup", label: "Sign up", description: "Create a new account." },
     ],
     [],
   );
